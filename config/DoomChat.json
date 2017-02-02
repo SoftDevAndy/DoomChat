@@ -1,0 +1,16 @@
+{
+  "Badwords": [
+    "DAMN"
+  ],
+  "ColorAdminName": "#bef25e",
+  "ColorAdminWarning": "#ff0707",
+  "ColorGlobalText": "#e5e5e5",
+  "ColorMutedWarning": "#fcfc71",
+  "ColorPlayerName": "#797a79",
+  "ColorPMTag": "#660066",
+  "ColorTradeChat": "#ff99dd",
+  "MessageCensored": "I said something bad...",
+  "MessageMuted": "[MUTE]",
+  "MessageWarning": "[BAD]",
+  "MuteList": {}
+}
