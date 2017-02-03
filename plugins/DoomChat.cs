@@ -522,14 +522,17 @@ namespace Oxide.Plugins
         [ChatCommand("t")]
         void cmd_PostIntoTradeChat(BasePlayer player, string cmd, string[] args)
         {
-            if (args.Length > 1)
-            {
-                if (list_TradeChatIDs.Contains(player.UserIDString) == false)
-                {
-                    list_TradeChatIDs.Add(player.UserIDString);
-                    PrintToChat(player, "Subbed to trade chat.");
-                }
+            bool firstTime = false;
 
+            if (list_TradeChatIDs.Contains(player.UserIDString) == false)
+            {
+                list_TradeChatIDs.Add(player.UserIDString);
+                PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
+                firstTime = true;
+            }
+
+            if (argsCheck(args))
+            {
                 string msg = "";
 
                 for (int i = 0; i < args.Length; i++)
@@ -544,7 +547,7 @@ namespace Oxide.Plugins
 
                 string fullMsg = " <color=" + Color_TradeText + ">[Trade] " + "</color><color=" + Color_PlayerName + ">" + player.displayName + ": </color>" + msg;
 
-                Puts(fullMsg);
+                Puts("[Trade Chat] " + player.displayName + ": " + msg);
 
                 foreach (string playerID in list_TradeChatIDs)
                 {
@@ -555,7 +558,10 @@ namespace Oxide.Plugins
                 }
             }
             else
-                PrintToChat(player, "Message was too short.");
+            {
+                if(firstTime != true)
+                    PrintToChat(player, "Message was too short.");
+            }
         }
 
         [ChatCommand("unsub")]
@@ -612,7 +618,8 @@ namespace Oxide.Plugins
                     {
                         var foundPlayer = rust.FindPlayer(member);
 
-                        PrintToChat(foundPlayer, "<color=" + colouredTag + ">" + "[CLAN CHAT] </color>" + "<color=" + Color_PlayerName + ">" + player.displayName + ":</color> " + msg);
+                        if(foundPlayer != null)
+                            PrintToChat(foundPlayer, "<color=" + colouredTag + ">" + "[CLAN CHAT] </color>" + "<color=" + Color_PlayerName + ">" + player.displayName + ":</color> " + msg);
                     }
                 }
 
@@ -1081,7 +1088,7 @@ namespace Oxide.Plugins
                 {
                     if (IsOnlineAndValid(player, args[0]))
                     {
-                        string online = "<color=green>" + args[0] + " is online.</color>";
+                        string online = "<color=green>" + IsOnlinePoke(player,args[0]) + " is online.</color>";
 
                         PrintToChat(player, online);
                     }
@@ -1126,16 +1133,21 @@ namespace Oxide.Plugins
                     {
                         string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
 
-                        Puts("[PM]" + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+                        Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
-                        PrintToChat(foundPlayer, fullMsg);
-                        PrintToChat(player, fullMsg);
+                        //PrintToChat(foundPlayer, fullMsg);
+                        //PrintToChat(player, fullMsg);
+
+                        rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
+                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
 
                         UpdateLastReplied(player, foundPlayer);
                     }
                     else
-                        PrintToChat(player, "You can't PM yourself.");
+                       PrintToChat(player, "You can't PM yourself.");
                 }
+                else
+                    PrintToChat(player, "The player " + args[0] + " is not online.");
             }
             else
                 PrintToChat(player, "Message was too short.");
@@ -1145,7 +1157,7 @@ namespace Oxide.Plugins
         [ChatCommand("r")]
         void cmd_PrivateMessageReply(BasePlayer player, string cmd, string[] args)
         {
-            if (args.Length > 0)
+            if (argsCheck(args))
             {
                 if (list_LastRepliedTo.ContainsKey(player.UserIDString))
                 {
@@ -1167,10 +1179,13 @@ namespace Oxide.Plugins
 
                         string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
 
-                        Puts("[PM]" + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+                        Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
-                        PrintToChat(foundPlayer, fullMsg);
-                        PrintToChat(player, fullMsg);
+                        //PrintToChat(foundPlayer, fullMsg);
+                        //PrintToChat(player, fullMsg);
+
+                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                        rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
 
                         UpdateLastReplied(player, foundPlayer); // DOUBLE CHECK THIS
                     }
@@ -1231,10 +1246,18 @@ namespace Oxide.Plugins
                 }
                 else
                 {
-                    PrintToChat(player, $"{foundPlayer.displayName} is not online, try again later!");
+                    //PrintToChat(player, $"{foundPlayer.displayName} is not online, try again later!");
                     return false;
                 }
             }
+
+        }// Checks if the user is online and the username is valid
+
+        public string IsOnlinePoke(BasePlayer player, string partialName)
+        {
+            var foundPlayer = rust.FindPlayer(partialName);
+
+            return foundPlayer.displayName;
 
         }// Checks if the user is online and the username is valid
 
