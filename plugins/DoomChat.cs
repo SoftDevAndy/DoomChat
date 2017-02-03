@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "AndyDev2013 & wski", "2.0.0")]
+    [Info("DoomChat", "AndyDev2013 & wski", "2.0.1")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -26,7 +26,7 @@ namespace Oxide.Plugins
         const int MINTAGSIZE = 3;
         const int MAXTAGSIZE = 5;
 
-        const string CLANERRORMSG = "Please follow the format. Example /clan_create BACCA #663300";
+        const string CLANERRORMSG = "Please follow the format. Example /clan_create BACCA #ffffff";
         const string ERROR = "You couldn't update the configuration file for some reason...";
         const string UNKNOWN = "Unknown Command: ";
 
@@ -113,15 +113,19 @@ namespace Oxide.Plugins
         string CommandsText_Player()
         {
             string msg = "";
-            msg += "[DoomTown Chat Commands]";
+            msg += "<color=grey>[DoomTown Chat Commands]</color>";
             msg += "\n\n/cmd - Lists commands.";
-            msg += "\n/cmd_clan - Lists all the clan commands";
-            msg += "\n/pm <playername> - Private message a player if they are online.";
-            msg += "\n/r - Reply to the last person who messaged you.";
+            msg += "\n\n<color=red>Clans</color>";
+            msg += "\n/cmd_clan - Lists all the clan commands.";
+            msg += "\n\n<color=red>Private Messages</color>";
+            msg += "\n/pm <playername> - Private message a player.";
+            msg += "\n/r - Reply to the last person you messaged/messaged you.";
+            msg += "\n\n<color=red>Online Checker</color>";
             msg += "\n/poke <playername> - Check if a user if online or offline.";
+            msg += "\n\n<color=red>Trade Chat</color>";
             msg += "\n/t <text> - Post in trade chat";
-            msg += "\n/unsub - Unsub from trade chat so you no longer see trades.";
-            msg += "\n\n[DoomTown Chat Commands]";
+            msg += "\n/unsub - Unsubscribe from trade chat.";
+            msg += "\n\n<color=grey>[DoomTown Chat Commands]</color>";
             return msg;
         }
 
@@ -211,7 +215,7 @@ namespace Oxide.Plugins
             SaveClanData();
             SaveConfigurationChanges();
 
-            Puts("Server just saved DoomChat stuffs");
+            Puts("Server just saved. DoomChat data files and it's configuration file was also saved.");
         }
 
         protected override void LoadDefaultConfig()
@@ -356,7 +360,7 @@ namespace Oxide.Plugins
 
                     list_FilteredWords.Add(tmp);
 
-                    //SaveConfigurationChanges(); // Moved to server save function
+                    SaveConfigurationChanges();
 
                     PrintToChat(player, msg);
                 }
@@ -380,7 +384,7 @@ namespace Oxide.Plugins
                         list_FilteredWords.Remove(tmp);
                     }
 
-                    //SaveConfigurationChanges(); //Done on server save
+                    SaveConfigurationChanges();
 
                     PrintToChat(player, msg);
                 }
@@ -428,7 +432,7 @@ namespace Oxide.Plugins
                         {
                             list_MutedPlayers.Add(foundPlayer.UserIDString, true);
                             PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
-                            //SaveConfigurationChanges(); //Done on server save
+                            SaveConfigurationChanges();
                         }
                         else
                             PrintToChat(player, args[0] + " already added to mute list");
@@ -473,7 +477,7 @@ namespace Oxide.Plugins
                         {
                             name = foundPlayer.displayName;
                             list_MutedPlayers.Remove(foundPlayer.UserIDString);
-                            //SaveConfigurationChanges(); // Done on server save
+                            SaveConfigurationChanges();
                         }
                     }
 
@@ -502,7 +506,7 @@ namespace Oxide.Plugins
                         {
                             list_MutedPlayers.Add(foundPlayer.UserIDString, false);
                             PrintToChat(player, "Added: " + foundPlayer.displayName + " to mute list.");
-                            //SaveConfigurationChanges(); //Done on server save
+                            SaveConfigurationChanges();
                         }
                         else
                             PrintToChat(player, args[0] + " already added to mute list");
@@ -554,12 +558,14 @@ namespace Oxide.Plugins
                     var foundPlayer = rust.FindPlayer(playerID);
 
                     if (foundPlayer != null)
-                        PrintToChat(foundPlayer, fullMsg);
+                    {
+                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                    }
                 }
             }
             else
             {
-                if(firstTime != true)
+                if (firstTime != true)
                     PrintToChat(player, "Message was too short.");
             }
         }
@@ -611,6 +617,7 @@ namespace Oxide.Plugins
 
                 string clanName = allClans.getClanTag(player.UserIDString);
                 string colouredTag = allClans.getClanByTag(clanName).tagColor;
+                string fullMsg = "<color=" + colouredTag + ">" + "[CLAN CHAT] </color>" + "<color=" + Color_PlayerName + ">" + player.displayName + ":</color> " + msg;
 
                 foreach (string member in allClans.getClanByTag(clanName).members)
                 {
@@ -618,12 +625,12 @@ namespace Oxide.Plugins
                     {
                         var foundPlayer = rust.FindPlayer(member);
 
-                        if(foundPlayer != null)
-                            PrintToChat(foundPlayer, "<color=" + colouredTag + ">" + "[CLAN CHAT] </color>" + "<color=" + Color_PlayerName + ">" + player.displayName + ":</color> " + msg);
+                        if (foundPlayer != null)
+                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
                     }
                 }
 
-                Puts("[CLAN CHAT]" + player.displayName + ": " + msg);
+                Puts("[CLAN CHAT] " + player.displayName + ": " + msg);
             }
             else
                 PrintToChat(player, "You are not in a clan.");
@@ -670,7 +677,7 @@ namespace Oxide.Plugins
 
                         ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + " has been dismantled by " + player.displayName });
 
-                        //SaveClanData(); // Done on server save
+                        SaveClanData();
                     }
                     else
                         PrintToChat(player, "Couldn't find the " + c.tag + " clan to dismantle");
@@ -693,7 +700,7 @@ namespace Oxide.Plugins
 
                         ClanObj c = new ClanObj(tag);
 
-                        if (allClans.clansList.Contains(c))
+                        if (allClans.getClanByTag(tag) != null)
                         {
                             PrintToChat(player, "Clan: " + args[0] + " already exits");
                         }
@@ -713,7 +720,7 @@ namespace Oxide.Plugins
 
                                     list_UserToClanTags.Add(player.UserIDString, t);
 
-                                    //SaveClanData(); // Done on server save
+                                    SaveClanData();
 
                                     PrintToChat(player, "Clan <color=" + tagColor + ">" + t + "</color> Created");
                                 }
@@ -757,7 +764,7 @@ namespace Oxide.Plugins
                                 PrintToChat(player, "Invited player " + foundPlayer.displayName + " to your clan.");
                                 PrintToChat(foundPlayer, "You have a clan invite from " + allClans.getClanByOwner(player.UserIDString).tag);
 
-                                //SaveInviteData(); // Done on server save
+                                SaveInviteData();
                             }
                         }
                         else
@@ -795,10 +802,14 @@ namespace Oxide.Plugins
 
                         if (isOwner)
                         {
+                            Puts("Owner " + isOwner + " Clan " + clanname);
+
                             ClanObj c = new ClanObj(clanname);
 
                             if (allClans.clansList.Contains(c))
                             {
+                                Puts("Clan exists");
+
                                 foreach (KeyValuePair<string, string> kv in allInvites.pendingInvites)
                                 {
                                     if (kv.Value == args[0])
@@ -806,6 +817,8 @@ namespace Oxide.Plugins
                                         allInvites.pendingInvites.Remove(kv.Value);
                                     }
                                 }
+
+                                Puts("Removed Invites");
 
                                 // Scrapping Invites
 
@@ -815,33 +828,34 @@ namespace Oxide.Plugins
                                         list_UserToClanTags.Remove(member);
                                 }
 
+                                Puts("Removing player to clan tag");
+
                                 // Removing Tags on list
 
                                 ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled by " + player.displayName });
 
                                 // Removing Clan
 
-                                Puts("Clan count: " + allClans.clansList.Count);
-
                                 allClans.clansList.Remove(c);
 
-                                Puts("Clan count: " + allClans.clansList.Count);
+                                Puts("Removed Clan from list and saved to file");
 
-                                //SaveClanData(); // Done on server save
-                                //SaveInviteData(); // Done on server save
-                            }
-                            else
-                            {
-                                allClans.leaveClan(player.UserIDString);
-
-                                //SaveClanData(); // Done on server save
+                                SaveClanData();
+                                SaveInviteData();
                             }
                         }
                         else
                         {
+                            Puts("Not owner and leaving clan");
+
+                            PrintToChat(player, "You have left the clan " + clanname + " .");
+
                             allClans.leaveClan(player.UserIDString);
 
-                            //SaveClanData(); // Done on server save
+                            if (list_UserToClanTags.ContainsKey(player.UserIDString))
+                                list_UserToClanTags.Remove(player.UserIDString);
+
+                            SaveClanData();
                         }
                     }
                 }
@@ -859,8 +873,8 @@ namespace Oxide.Plugins
 
                         allInvites.pendingInvites.Remove(player.UserIDString);
 
-                        //SaveInviteData();// Done on server save
-                        //SaveClanData(); // Done on server save
+                        SaveInviteData();
+                        SaveClanData();
                     }
 
                     if (choice == "DECLINE")
@@ -868,8 +882,8 @@ namespace Oxide.Plugins
                         PrintToChat(player, "Invite to " + allInvites.pendingInvites[player.UserIDString] + " declined!");
                         allInvites.pendingInvites.Remove(player.UserIDString);
 
-                        //SaveInviteData();// Done on server save
-                        //SaveClanData(); // Done on server save
+                        SaveInviteData();
+                        SaveClanData();
                     }
                 }
             }
@@ -1088,7 +1102,7 @@ namespace Oxide.Plugins
                 {
                     if (IsOnlineAndValid(player, args[0]))
                     {
-                        string online = "<color=green>" + IsOnlinePoke(player,args[0]) + " is online.</color>";
+                        string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
 
                         PrintToChat(player, online);
                     }
@@ -1144,7 +1158,7 @@ namespace Oxide.Plugins
                         UpdateLastReplied(player, foundPlayer);
                     }
                     else
-                       PrintToChat(player, "You can't PM yourself.");
+                        PrintToChat(player, "You can't PM yourself.");
                 }
                 else
                     PrintToChat(player, "The player " + args[0] + " is not online.");
