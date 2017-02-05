@@ -279,8 +279,6 @@ namespace Oxide.Plugins
                 list_UserToClanTags.Remove(player.UserIDString);
             }
 
-            allTradeChatIDs.removePlayer(player.UserIDString);
-
         }// If the player was a moderator or admin and was registed on the moderator list, they are removed on disconnect.
 
         object OnUserChat(IPlayer player, string message)
@@ -405,8 +403,7 @@ namespace Oxide.Plugins
         {
             public HashSet<string> list_TradeChatIDs { get; set; }
 
-            public TradeChatData()
-            {
+            public TradeChatData() {
                 list_TradeChatIDs = new HashSet<string>();
             }
 
