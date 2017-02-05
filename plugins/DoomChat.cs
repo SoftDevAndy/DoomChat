@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "AndyDev2013 & wski", "2.0.2")]
+    [Info("DoomChat", "AndyDev2013 & wski", "2.0.3")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -20,29 +20,31 @@ namespace Oxide.Plugins
         private InviteData allInvites = new InviteData();
         private TradeChatData allTradeChatIDs = new TradeChatData();
 
-        System.Random rnd = new System.Random();
+        private System.Random rnd = new System.Random();
 
-        const int MINTAGSIZE = 3;
-        const int MAXTAGSIZE = 5;
+        private const int MINTAGSIZE = 3;
+        private const int MAXTAGSIZE = 5;
 
-        const string CLANERRORMSG = "Please follow the format. Example /clan_create BACCA #ffffff";
-        const string ERROR = "You couldn't update the configuration file for some reason...";
-        const string UNKNOWN = "Unknown Command: ";
+        private const string CLANERRORMSG = "Please follow the format. Example /clan_create BACCA #ffffff";
+        private const string ERROR = "You couldn't update the configuration file for some reason...";
+        private const string UNKNOWN = "Unknown Command: ";
 
-        string Tag_Warning = "[CENSORED]";
-        string Tag_Muted = "[MUTED]";
-        string Tag_PrivateMessage = "[PM]";
-        string Message_ScoldText = "I said a naughty word... I'm looking to get banned..";
+        private string Tag_Warning = "[CENSORED]";
+        private string Tag_Muted = "[MUTED]";
+        private string Tag_PrivateMessage = "[PM]";
+        private string Message_ScoldText = "I said a naughty word... I'm looking to get banned..";
 
-        string Color_WordFilterTag = "#ff0707";
-        string Color_MutedFilterTag = "#fcfc71";
-        string Color_PrivateMessageTag = "#660066";
-        string Color_AdminName = "#bef25e";
-        string Color_PlayerName = "#797a79";
-        string Color_GlobalText = "#e5e5e5";
-        string Color_TradeText = "#ff99dd";
+        private string Color_WordFilterTag = "#ff0707";
+        private string Color_MutedFilterTag = "#fcfc71";
+        private string Color_PrivateMessageTag = "#660066";
+        private string Color_AdminName = "#bef25e";
+        private string Color_PlayerName = "#797a79";
+        private string Color_GlobalText = "#e5e5e5";
+        private string Color_TradeText = "#ff99dd";
 
-        bool autoMute = false;
+        private bool autoMute = false;
+
+        private string YOUAREMUTED = "You are muted, please contact one of the admins.";
 
         /* End of Global Variables */
 
@@ -270,14 +272,10 @@ namespace Oxide.Plugins
         void OnPlayerDisconnected(BasePlayer player, string reason)
         {
             if (list_ModeratorIDs.Contains(player.UserIDString))
-            {
                 list_ModeratorIDs.Remove(player.UserIDString);
-            }
 
             if (list_UserToClanTags.ContainsKey(player.UserIDString))
-            {
                 list_UserToClanTags.Remove(player.UserIDString);
-            }
 
         }// If the player was a moderator or admin and was registed on the moderator list, they are removed on disconnect.
 
@@ -318,10 +316,6 @@ namespace Oxide.Plugins
                 {
                     styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + muteText(message) + "</color>";
                     ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
-                }
-                else
-                {
-                    PrintToChat("You are muted, please contact one of the admins.");
                 }
 
                 TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
@@ -398,163 +392,6 @@ namespace Oxide.Plugins
         }
 
         #endregion System System
-
-        class TradeChatData
-        {
-            public HashSet<string> list_TradeChatIDs { get; set; }
-
-            public TradeChatData() {
-                list_TradeChatIDs = new HashSet<string>();
-            }
-
-            public bool doesExist(string userid)
-            {
-                if (list_TradeChatIDs.Contains(userid))
-                    return true;
-                else
-                    return false;
-            }
-
-            public void addPlayer(string userid)
-            {
-                if (list_TradeChatIDs.Contains(userid) == false)
-                    list_TradeChatIDs.Add(userid);
-            }
-
-            public void removePlayer(string userid)
-            {
-                if (list_TradeChatIDs.Contains(userid))
-                    list_TradeChatIDs.Remove(userid);
-            }
-        }
-
-        class MutedPlayer
-        {
-            public string userID { get; set; }
-            public string displayName { get; set; }
-            public bool muteStatus { get; set; }
-            public string offendingMessage { get; set; }
-            public string offendingWord { get; set; }
-
-            public MutedPlayer() { }
-
-            public MutedPlayer(string userID)
-            {
-                this.userID = userID;
-            }
-
-            public MutedPlayer(string userID, string displayName, bool muteStatus, string offendingMessage, string offendingWord)
-            {
-                this.userID = userID;
-                this.displayName = displayName;
-                this.muteStatus = muteStatus;
-                this.offendingMessage = offendingMessage;
-                this.offendingWord = offendingWord;
-            }
-
-            public override bool Equals(object obj)
-            {
-                var item = obj as MutedPlayer;
-
-                if (userID != null && item != null)
-                {
-                    if (userID != "")
-                    {
-                        if (this.userID == item.userID)
-                            return true;
-                        else
-                            return false;
-                    }
-                    else
-                        return false;
-                }
-                else
-                    return false;
-            }
-
-            public override int GetHashCode()
-            {
-                return userID.GetHashCode();
-            }
-        }
-
-        class MutedData
-        {
-            public HashSet<MutedPlayer> playerList { get; set; }
-
-            public MutedData()
-            {
-                playerList = new HashSet<MutedPlayer>();
-            }
-
-            public MutedData(HashSet<MutedPlayer> playerList)
-            {
-                this.playerList = playerList;
-            }
-
-            public int getMutedCount()
-            {
-                return playerList.Count;
-            }
-
-            public void addMutedPlayer_Manual(string userID, string displayName, bool status)
-            {
-                string offendingMessage = "Manual Mute by admin";
-
-                MutedPlayer mutedPlayer = new MutedPlayer(userID, displayName, status, offendingMessage, offendingMessage);
-
-                if (playerList.Contains(mutedPlayer) == false)
-                    playerList.Add(mutedPlayer);
-            }
-
-            public void addMutedPlayer_Logged(string userID, string displayName, bool status, string offendingMessage, string offendingWord)
-            {
-                MutedPlayer mutedPlayer = new MutedPlayer(userID, displayName, status, offendingMessage, offendingWord);
-
-                if (playerList.Contains(mutedPlayer) == false)
-                    playerList.Add(mutedPlayer);
-            }
-
-            public void removeMutedPlayer(string userID)
-            {
-                MutedPlayer mutedPlayer = new MutedPlayer(userID);
-
-                if (playerList.Contains(mutedPlayer) != false)
-                    playerList.Remove(mutedPlayer);
-            }
-
-            public bool mutedStatus(string userID)
-            {
-                MutedPlayer muted = new MutedPlayer(userID);
-
-                if (playerList.Contains(muted))
-                {
-                    foreach (MutedPlayer p in playerList)
-                    {
-                        if (p.userID == muted.userID)
-                            return p.muteStatus;
-                    }
-
-                    return false;
-                }
-
-                return false;
-
-            }
-
-            public bool isMuted(string userID)
-            {
-                if (playerList.Contains(new MutedPlayer(userID)))
-                    return true;
-                else
-                    return false;
-            }
-        }
-
-        void SaveMuteList()
-        {
-            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_MutedPlayers", allMutedPlayers);
-        }
 
         #region Mute Player System
 
@@ -719,6 +556,135 @@ namespace Oxide.Plugins
             else
                 NoPerms(player, cmd);
         }
+
+        class MutedPlayer
+        {
+            public string userID { get; set; }
+            public string displayName { get; set; }
+            public bool muteStatus { get; set; }
+            public string offendingMessage { get; set; }
+            public string offendingWord { get; set; }
+
+            public MutedPlayer() { }
+
+            public MutedPlayer(string userID)
+            {
+                this.userID = userID;
+            }
+
+            public MutedPlayer(string userID, string displayName, bool muteStatus, string offendingMessage, string offendingWord)
+            {
+                this.userID = userID;
+                this.displayName = displayName;
+                this.muteStatus = muteStatus;
+                this.offendingMessage = offendingMessage;
+                this.offendingWord = offendingWord;
+            }
+
+            public override bool Equals(object obj)
+            {
+                var item = obj as MutedPlayer;
+
+                if (userID != null && item != null)
+                {
+                    if (userID != "")
+                    {
+                        if (this.userID == item.userID)
+                            return true;
+                        else
+                            return false;
+                    }
+                    else
+                        return false;
+                }
+                else
+                    return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return userID.GetHashCode();
+            }
+        }
+
+        class MutedData
+        {
+            public HashSet<MutedPlayer> playerList { get; set; }
+
+            public MutedData()
+            {
+                playerList = new HashSet<MutedPlayer>();
+            }
+
+            public MutedData(HashSet<MutedPlayer> playerList)
+            {
+                this.playerList = playerList;
+            }
+
+            public int getMutedCount()
+            {
+                return playerList.Count;
+            }
+
+            public void addMutedPlayer_Manual(string userID, string displayName, bool status)
+            {
+                string offendingMessage = "Manual Mute by admin";
+
+                MutedPlayer mutedPlayer = new MutedPlayer(userID, displayName, status, offendingMessage, offendingMessage);
+
+                if (playerList.Contains(mutedPlayer) == false)
+                    playerList.Add(mutedPlayer);
+            }
+
+            public void addMutedPlayer_Logged(string userID, string displayName, bool status, string offendingMessage, string offendingWord)
+            {
+                MutedPlayer mutedPlayer = new MutedPlayer(userID, displayName, status, offendingMessage, offendingWord);
+
+                if (playerList.Contains(mutedPlayer) == false)
+                    playerList.Add(mutedPlayer);
+            }
+
+            public void removeMutedPlayer(string userID)
+            {
+                MutedPlayer mutedPlayer = new MutedPlayer(userID);
+
+                if (playerList.Contains(mutedPlayer) != false)
+                    playerList.Remove(mutedPlayer);
+            }
+
+            public bool mutedStatus(string userID)
+            {
+                MutedPlayer muted = new MutedPlayer(userID);
+
+                if (playerList.Contains(muted))
+                {
+                    foreach (MutedPlayer p in playerList)
+                    {
+                        if (p.userID == muted.userID)
+                            return p.muteStatus;
+                    }
+
+                    return false;
+                }
+
+                return false;
+
+            }
+
+            public bool isMuted(string userID)
+            {
+                if (playerList.Contains(new MutedPlayer(userID)))
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        void SaveMuteList()
+        {
+            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_MutedPlayers", allMutedPlayers);
+        }
+
         #endregion
 
         #region Trade System
@@ -727,45 +693,70 @@ namespace Oxide.Plugins
         {
             bool firstTime = false;
 
-            if (allTradeChatIDs.doesExist(player.UserIDString) == false)
+            if (allMutedPlayers.isMuted(player.UserIDString) == false)
             {
-                allTradeChatIDs.addPlayer(player.UserIDString);
-                PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
-                firstTime = true;
-            }
-
-            if (argsCheck(args))
-            {
-                string msg = "";
-
-                for (int i = 0; i < args.Length; i++)
+                if (allTradeChatIDs.doesExist(player.UserIDString) == false)
                 {
-                    string tmp = "";
-
-                    if (i > 0)
-                        tmp = " ";
-
-                    msg += tmp + args[i];
+                    allTradeChatIDs.addPlayer(player.UserIDString);
+                    PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
+                    firstTime = true;
                 }
 
-                string fullMsg = " <color=" + Color_TradeText + ">[Trade] " + "</color><color=" + Color_PlayerName + ">" + player.displayName + ": </color>" + msg;
-
-                Puts("[Trade Chat] " + player.displayName + ": " + msg);
-
-                foreach (string playerID in allTradeChatIDs.list_TradeChatIDs)
+                if (argsCheck(args))
                 {
-                    var foundPlayer = rust.FindPlayer(playerID);
+                    string msg = "";
 
-                    if (foundPlayer != null)
+                    for (int i = 0; i < args.Length; i++)
                     {
-                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                        string tmp = "";
+
+                        if (i > 0)
+                            tmp = " ";
+
+                        msg += tmp + args[i];
+                    }
+
+                    string fullMsg = " <color=" + Color_TradeText + ">[Trade] " + "</color><color=" + Color_PlayerName + ">" + player.displayName + ": </color>" + msg;
+
+                    Puts("[Trade Chat] " + player.displayName + ": " + msg);
+
+                    foreach (string playerID in allTradeChatIDs.list_TradeChatIDs)
+                    {
+                        var foundPlayer = rust.FindPlayer(playerID);
+
+                        if (foundPlayer != null)
+                        {
+                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                        }
                     }
                 }
-            }
+                else
+                {
+                    if (firstTime != true)
+                        PrintToChat(player, "You are already subscribed to tradechat.");
+                }
+
+            }// If not on the mute list
             else
             {
-                if (firstTime != true)
-                    PrintToChat(player, "You are already subscribed to tradechat.");
+                PrintToChat(player, YOUAREMUTED);
+
+                if (argsCheck(args))
+                {
+                    string msg = "";
+
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        string tmp = "";
+
+                        if (i > 0)
+                            tmp = " ";
+
+                        msg += tmp + args[i];
+                    }
+
+                    TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
+                }
             }
         }
 
@@ -780,6 +771,37 @@ namespace Oxide.Plugins
             else
                 PrintToChat(player, "You aren't signed up to tradechat");
         }
+
+        class TradeChatData
+        {
+            public HashSet<string> list_TradeChatIDs { get; set; }
+
+            public TradeChatData()
+            {
+                list_TradeChatIDs = new HashSet<string>();
+            }
+
+            public bool doesExist(string userid)
+            {
+                if (list_TradeChatIDs.Contains(userid))
+                    return true;
+                else
+                    return false;
+            }
+
+            public void addPlayer(string userid)
+            {
+                if (list_TradeChatIDs.Contains(userid) == false)
+                    list_TradeChatIDs.Add(userid);
+            }
+
+            public void removePlayer(string userid)
+            {
+                if (list_TradeChatIDs.Contains(userid))
+                    list_TradeChatIDs.Remove(userid);
+            }
+        }
+
         #endregion
 
         #region Clan System
@@ -1334,12 +1356,52 @@ namespace Oxide.Plugins
         [ChatCommand("pm")]
         void cmd_PrivateMessage(BasePlayer player, string cmd, string[] args)
         {
-            if (args.Length > 1)
+            if (allMutedPlayers.isMuted(player.UserIDString) == false)
             {
-                if (IsOnlineAndValid(player, args[0]))
+                if (args.Length > 1)
                 {
-                    var foundPlayer = rust.FindPlayer(args[0]);
+                    if (IsOnlineAndValid(player, args[0]))
+                    {
+                        var foundPlayer = rust.FindPlayer(args[0]);
 
+                        string msg = "";
+
+                        for (int i = 1; i < args.Length; i++)
+                        {
+                            string tmp = "";
+
+                            if (i > 0)
+                                tmp = " ";
+
+                            msg += tmp + args[i];
+                        }
+
+                        if (player.UserIDString != foundPlayer.UserIDString)
+                        {
+                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
+
+                            Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+
+                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
+                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+
+                            UpdateLastReplied(player, foundPlayer);
+                        }
+                        else
+                            PrintToChat(player, "You can't PM yourself.");
+                    }
+                    else
+                        PrintToChat(player, "The player " + args[0] + " is not online.");
+                }
+                else
+                    PrintToChat(player, "Message was too short.");
+            }
+            else
+            {
+                PrintToChat(player, YOUAREMUTED);
+
+                if (args.Length > 1)
+                {
                     string msg = "";
 
                     for (int i = 1; i < args.Length; i++)
@@ -1352,28 +1414,9 @@ namespace Oxide.Plugins
                         msg += tmp + args[i];
                     }
 
-                    if (player.UserIDString != foundPlayer.UserIDString)
-                    {
-                        string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
-
-                        Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
-
-                        //PrintToChat(foundPlayer, fullMsg);
-                        //PrintToChat(player, fullMsg);
-
-                        rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
-                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
-
-                        UpdateLastReplied(player, foundPlayer);
-                    }
-                    else
-                        PrintToChat(player, "You can't PM yourself.");
+                    TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                 }
-                else
-                    PrintToChat(player, "The player " + args[0] + " is not online.");
             }
-            else
-                PrintToChat(player, "Message was too short.");
 
         }// Private Message another player
 
@@ -1404,13 +1447,10 @@ namespace Oxide.Plugins
 
                         Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
-                        //PrintToChat(foundPlayer, fullMsg);
-                        //PrintToChat(player, fullMsg);
-
                         rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
                         rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
 
-                        UpdateLastReplied(player, foundPlayer); // DOUBLE CHECK THIS
+                        UpdateLastReplied(player, foundPlayer);
                     }
                 }
                 else
