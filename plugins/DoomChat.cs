@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "AndyDev2013 & wski", "2.0.3")]
+    [Info("DoomChat", "AndyDev2013 & wski", "2.0.5")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -870,13 +870,40 @@ namespace Oxide.Plugins
         [ChatCommand("clan_list")]
         void cmd_ClanList(BasePlayer player, string cmd, string[] args)
         {
+            const int PAGESIZE = 10;
+            bool valid = true;
+
             if (isAdmin(player.UserIDString))
             {
-                string clist = "Clan List";
+                int page = 0;
 
+                if (argsCheck(args))
+                {
+                    valid = int.TryParse(args[0], out page);
+
+                    if (valid)
+                        page = Convert.ToInt32(args[0]);
+                }
+
+                int count = 0;
+                int startCount = 0;
+                bool paged = false;
+
+                if (page == 0 || page == 1)
+                    page = 0;
+                else
+                    page = page - 1;
+                
+                startCount = page * PAGESIZE;
+
+                string clist = "Clan List -- " + allClans.clansList.Count + " clans exist " + "\nPage " + (page + 1) + " Showing " + startCount + " / " + (startCount + 10);
+                
                 foreach (ClanObj clan in allClans.clansList)
                 {
-                    clist = clist + "\n<color=" + clan.tagColor + ">" + clan.tag + "</color> ---- Members: " + clan.members.Count;
+                    if (count >= startCount && count <= (startCount + PAGESIZE) && count < allClans.clansList.Count)
+                        clist = clist + "\n<color=" + clan.tagColor + ">" + clan.tag + "</color> ---- Members: " + clan.members.Count;
+
+                    ++count;
                 }
 
                 PrintToChat(player, clist);
