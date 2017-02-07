@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "AndyDev2013 & wski", "2.0.5")]
+    [Info("DoomChat", "AndyDev2013 & wski", "2.1.0")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -53,8 +53,8 @@ namespace Oxide.Plugins
         string CommandsText_Admin()
         {
             string msg = "";
-            msg += "[DoomTown Admin Chat Commands]\n";
-            msg += "\n/cmd - Lists admin commands.";
+            msg += "<color=grey>[DoomTown Admin Chat Commands]</color>";
+            msg += "\n\n/cmd - Lists admin commands.";
             msg += "\n/automute <bool> - Switches automute on or off";
             msg += "\n/cmd_player - Lists player commands.";
             msg += "\n/cmd_mute - Lists all mute commands";
@@ -66,41 +66,46 @@ namespace Oxide.Plugins
             msg += "\n/poke <playername> - Check if a user if online or offline.";
             msg += "\n/pm <playername> - Private message a player if they are online.";
             msg += "\n/r - Reply to the last person who messaged you.";
-            msg += "\n\n[DoomTown Admin Chat Commands]";
+            msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
             return msg;
         }
 
         string CommandsText_Mute()
         {
             string msg = "";
-            msg += "[Admin Mute Commands]\n";
+            msg += "<color=grey>[Admin Mute Commands]</color>\n";
             msg += "\n/cmd_mute - Lists all mute commands";
             msg += "\n/mute_list - Lists muted users.";
             msg += "\n/mute <username> - Mutes user.";
             msg += "\n/unmute <username> - Unmutes the user.";
             msg += "\n/mutefun <username> - Mutes user and makes them moo.";
-            msg += "\n\n[Admin Mute Commands]";
+            msg += "\n\n<color=grey>[Admin Mute Commands]</color>";
             return msg;
         }
 
         string CommandsText_Filters()
         {
             string msg = "";
-            msg += "[Admin Filter Commands]\n";
+            msg += "<color=grey>[Admin Filter Commands]</color>\n";
             msg += "\n/filter_list - Lists filtered words.";
             msg += "\n/filter_add <text> - Adds word to filter list.";
             msg += "\n/filter_remove <text> - Removes word from filter list.";
-            msg += "\n\n[Admin Filter Commands]";
+            msg += "\n\n<color=grey>[Admin Filter Commands]</color>";
             return msg;
         }
 
         string CommandsText_Clans(bool admin)
         {
             string msg = "";
-            string adminline = "\n/clan_remove <text> - Removes clan. \n/clan_list <text> - Lists clans.";
+            string adminline = "\n/clan_remove <text> - Removes clan. \n/clan_list <pagenumber> - Lists clans. e.g /clan_list 2";
 
-            msg += "[Clan Commands]\n";
+            if (admin)
+                msg += "<color=grey>[Admin Clan Commands]</color>\n";
+            else
+                msg += "<color=grey>[Clan Commands]</color>\n";
+
             msg += "\n/c <text> - Talk in clan chat.";
+
             if (admin)
                 msg += adminline;
             msg += "\n/clan_create <tag letters> <hex colour> - Create a clan.";
@@ -109,7 +114,10 @@ namespace Oxide.Plugins
             msg += "\n/clan accept - Join clan if you have an invite.";
             msg += "\n/clan decline - Join clan if you have an invite.";
             msg += "\n/clan leave - Leave a clan if you are in one.";
-            msg += "\n\n[Clan Commands]";
+            if (admin)
+                msg += "\n\n<color=grey>[Admin Clan Commands]</color>";
+            else
+                msg += "\n\n<color=grey>[Clan Commands]</color>";
             return msg;
         }
 
@@ -284,8 +292,8 @@ namespace Oxide.Plugins
             string styled = "";
             string colouredClanTag = allClans.getClanTagColoured(player.Id);
 
-            if (allMutedPlayers.isMuted(player.Id) == false)
-            {
+             if (allMutedPlayers.isMuted(player.Id) == false)
+             {
                 string msg = CleanMsg(player.Id, player.Name, message);
 
                 if (Message_ScoldText == msg)
@@ -312,7 +320,7 @@ namespace Oxide.Plugins
             }
             else
             {
-                if (allMutedPlayers.isMuted(player.Id) == false)
+                if (allMutedPlayers.mutedStatus(player.Id) == false)
                 {
                     styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + muteText(message) + "</color>";
                     ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
@@ -407,14 +415,14 @@ namespace Oxide.Plugins
 
                     if (status == "ON" || status == "TRUE")
                     {
-                        PrintToChat(player, "Switched AutoMute ON");
+                        PrintToChat(player, "Switched AutoMute ON.");
                         autoMute = true;
                         valid = true;
                     }
 
                     if (status == "OFF" || status == "FALSE")
                     {
-                        PrintToChat(player, "Switched AutoMute OFF");
+                        PrintToChat(player, "Switched AutoMute OFF.");
                         autoMute = false;
                         valid = true;
                     }
@@ -465,15 +473,15 @@ namespace Oxide.Plugins
                         {
                             allMutedPlayers.addMutedPlayer_Manual(foundPlayer.UserIDString, foundPlayer.displayName, true);
                             PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
-                            Puts("[MUTED] Player " + foundPlayer.displayName);
+                            Puts("[MUTED] Player " + foundPlayer.displayName + " .");
                             SaveMuteList();
                         }
                         else
-                            PrintToChat(player, args[0] + " already added to mute list");
+                            PrintToChat(player, args[0] + " already added to mute list.");
                     }
                     else
                     {
-                        PrintToChat(player, args[0] + " not found please type the full name");
+                        PrintToChat(player, args[0] + " not found.");
                     }
                 }
             }
@@ -541,7 +549,7 @@ namespace Oxide.Plugins
                         {
                             allMutedPlayers.addMutedPlayer_Manual(foundPlayer.UserIDString, foundPlayer.displayName, false);
 
-                            PrintToChat(player, "Added: " + foundPlayer.displayName + " to mute list.");
+                            PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
                             SaveMuteList();
                         }
                         else
@@ -549,7 +557,7 @@ namespace Oxide.Plugins
                     }
                     else
                     {
-                        PrintToChat(player, args[0] + " not found please type the full name");
+                        PrintToChat(player, args[0] + " not found.");
                     }
                 }
             }
