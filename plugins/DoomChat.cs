@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "AndyDev2013 & wski", "2.1.0")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.1.0")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -272,9 +272,19 @@ namespace Oxide.Plugins
 
             string clanName = allClans.getPlayerClan(player.UserIDString);
 
-            if (clanName != "" && list_UserToClanTags.ContainsKey(player.UserIDString) == false)
-                list_UserToClanTags.Add(player.UserIDString, clanName);
+            if (clanName != "")
+            {
+                foreach (string member in allClans.getClanByTag(clanName).members)
+                {
+                    if (IsOnlineAndValid(player, member))
+                    {
+                        var foundPlayer = rust.FindPlayer(member);
 
+                        if (foundPlayer != null && foundPlayer != player)
+                            PrintToChat(foundPlayer, "<color=green>" + player.displayName + "</color> came online.");
+                    }
+                }
+            }
         }// Checking if the player is a moderator or admin and adding them to the moderator list.
 
         void OnPlayerDisconnected(BasePlayer player, string reason)
@@ -285,6 +295,22 @@ namespace Oxide.Plugins
             if (list_UserToClanTags.ContainsKey(player.UserIDString))
                 list_UserToClanTags.Remove(player.UserIDString);
 
+            string clanName = allClans.getPlayerClan(player.UserIDString);
+
+            if (clanName != "")
+            {
+                foreach (string member in allClans.getClanByTag(clanName).members)
+                {
+                    if (IsOnlineAndValid(player, member))
+                    {
+                        var foundPlayer = rust.FindPlayer(member);
+
+                        if (foundPlayer != null && foundPlayer != player)
+                            PrintToChat(foundPlayer, "<color=red>" + player.displayName + "</color> went offline.");
+                    }
+                }
+            }
+
         }// If the player was a moderator or admin and was registed on the moderator list, they are removed on disconnect.
 
         object OnUserChat(IPlayer player, string message)
@@ -292,8 +318,8 @@ namespace Oxide.Plugins
             string styled = "";
             string colouredClanTag = allClans.getClanTagColoured(player.Id);
 
-             if (allMutedPlayers.isMuted(player.Id) == false)
-             {
+            if (allMutedPlayers.isMuted(player.Id) == false)
+            {
                 string msg = CleanMsg(player.Id, player.Name, message);
 
                 if (Message_ScoldText == msg)
@@ -901,11 +927,11 @@ namespace Oxide.Plugins
                     page = 0;
                 else
                     page = page - 1;
-                
+
                 startCount = page * PAGESIZE;
 
                 string clist = "Clan List -- " + allClans.clansList.Count + " clans exist " + "\nPage " + (page + 1) + " Showing " + startCount + " / " + (startCount + 10);
-                
+
                 foreach (ClanObj clan in allClans.clansList)
                 {
                     if (count >= startCount && count <= (startCount + PAGESIZE) && count < allClans.clansList.Count)
@@ -1487,6 +1513,8 @@ namespace Oxide.Plugins
 
                         UpdateLastReplied(player, foundPlayer);
                     }
+                    else
+                        PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
                 }
                 else
                     PrintToChat(player, "Message was too short.");
