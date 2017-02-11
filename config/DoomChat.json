@@ -1,16 +1,22 @@
 {
+  "AutoMute": false,
   "Badwords": [
+    "BAD",
     "DAMN"
   ],
-  "ColorAdminName": "#bef25e",
+  "ColorAdminName": "#ecf0f1",
   "ColorAdminWarning": "#ff0707",
-  "ColorGlobalText": "#e5e5e5",
+  "ColorGlobalText": "#bdc3c7",
   "ColorMutedWarning": "#fcfc71",
-  "ColorPlayerName": "#797a79",
+  "ColorPlayerName": "#ecf0f1",
   "ColorPMTag": "#660066",
-  "ColorTradeChat": "#ff99dd",
+  "ColorTradeChat": "#2ecc71",
   "MessageCensored": "I said something bad...",
   "MessageMuted": "[MUTE]",
   "MessageWarning": "[BAD]",
-  "MuteList": {}
+  "Metric_AllMessages": 10,
+  "Metric_ClanMessages": 1,
+  "Metric_Pokes": 1,
+  "Metric_PrivateMessages": 1,
+  "Metric_TradeMessages": 10
 }

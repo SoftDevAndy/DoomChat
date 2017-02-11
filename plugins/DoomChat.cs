@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "2.2.1")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.2.2")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -71,6 +71,7 @@ namespace Oxide.Plugins
             msg += "\n/pm <playername> - Private message a player if they are online.";
             msg += "\n/r - Reply to the last person who messaged you.";
             msg += "\n/automute <bool> - Switches automute on or off.";
+            msg += "\n/metrics  - Shows Chat Metrics.";
             msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
             return msg;
         }
