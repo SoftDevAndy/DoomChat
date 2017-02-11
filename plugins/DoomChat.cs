@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "2.2.0")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.2.1")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -28,6 +28,7 @@ namespace Oxide.Plugins
         private const string CLANERRORMSG = "Please follow the format. Example /clan_create BACCA #ffffff";
         private const string ERROR = "You couldn't update the configuration file for some reason...";
         private const string UNKNOWN = "Unknown Command: ";
+        private string YOUAREMUTED = "You are muted, please contact one of the admins.";
 
         private string Tag_Warning = "[CENSORED]";
         private string Tag_Muted = "[MUTED]";
@@ -44,7 +45,11 @@ namespace Oxide.Plugins
 
         private bool autoMute = false;
 
-        private string YOUAREMUTED = "You are muted, please contact one of the admins.";
+        private int metric_privateMessages = 0;
+        private int metric_clanMessages = 0;
+        private int metric_tradeMessages = 0;
+        private int metric_allMessages = 0;
+        private int metric_pokes = 0;
 
         /* End of Global Variables */
 
@@ -67,6 +72,19 @@ namespace Oxide.Plugins
             msg += "\n/r - Reply to the last person who messaged you.";
             msg += "\n/automute <bool> - Switches automute on or off.";
             msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
+            return msg;
+        }
+
+        string Metrics_Text()
+        {
+            string msg = "";
+            msg += "<color=grey>[DoomTown Metrics]</color>";
+            msg += "\n\n - Private Messages: " + metric_privateMessages;
+            msg += "\n\n - Clan Messages: " + metric_clanMessages;
+            msg += "\n\n - Trade Messages: " + metric_tradeMessages;
+            msg += "\n\n - All Messages: " + metric_allMessages;
+            msg += "\n\n - Pokes: " + metric_pokes;
+            msg += "\n\n<color=grey>[DoomTown Metrics]</color>";
             return msg;
         }
 
@@ -251,6 +269,12 @@ namespace Oxide.Plugins
             Color_PrivateMessageTag = Config.Get<string>("ColorPMTag");
             autoMute = Config.Get<bool>("AutoMute");
 
+            metric_privateMessages = Config.Get<int>("Metric_PrivateMessages");
+            metric_clanMessages = Config.Get<int>("Metric_ClanMessages");
+            metric_tradeMessages = Config.Get<int>("Metric_TradeMessages");
+            metric_allMessages = Config.Get<int>("Metric_AllMessages");
+            metric_pokes = Config.Get<int>("Metric_Pokes");
+
             foreach (string w in bwords)
             {
                 list_FilteredWords.Add(w.ToUpper());
@@ -272,7 +296,7 @@ namespace Oxide.Plugins
             string clanName = allClans.getPlayerClan(player.UserIDString);
 
             if (clanName != "")
-            {                
+            {
                 foreach (string member in allClans.getClanByTag(clanName).members)
                 {
                     if (IsOnlineAndValid(player, member))
@@ -284,6 +308,7 @@ namespace Oxide.Plugins
                     }
                 }
             }
+
         }// Checking if the player is a moderator or admin and adding them to the moderator list.
 
         void OnPlayerDisconnected(BasePlayer player, string reason)
@@ -317,8 +342,8 @@ namespace Oxide.Plugins
             string styled = "";
             string colouredClanTag = allClans.getClanTagColoured(player.Id);
 
-             if (allMutedPlayers.isMuted(player.Id) == false)
-             {
+            if (allMutedPlayers.isMuted(player.Id) == false)
+            {
                 string msg = CleanMsg(player.Id, player.Name, message);
 
                 if (Message_ScoldText == msg)
@@ -354,6 +379,8 @@ namespace Oxide.Plugins
                 TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
             }
 
+            metric_allMessages++;
+
             return true;
         }
 
@@ -367,11 +394,11 @@ namespace Oxide.Plugins
             if (isAdmin(player.UserIDString))
             {
                 #region args 1
-                if (argsCheck(args,1))
+                if (argsCheck(args, 1))
                 {
                     string choice = args[0].ToUpper();
 
-                    if(choice == "LIST")
+                    if (choice == "LIST")
                     {
                         string clist = "Filter List";
 
@@ -437,6 +464,19 @@ namespace Oxide.Plugins
 
         #endregion System System
 
+        #region Metrics
+
+        [ChatCommand("metrics")]
+        void cmd_Metrics(BasePlayer player, string cmd, string[] args)
+        {
+            if (isAdmin(player.UserIDString))
+                PrintToChat(player, Metrics_Text());
+            else
+                NoPerms(player, args[0]);
+        }
+
+        #endregion
+
         #region Mute Player System
 
         [ChatCommand("automute")]
@@ -444,7 +484,7 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
-                if (argsCheck(args,1))
+                if (argsCheck(args, 1))
                 {
                     string status = args[0].ToUpper();
                     bool valid = false;
@@ -725,22 +765,32 @@ namespace Oxide.Plugins
         #endregion
 
         #region Trade System
+
+        [ChatCommand("unsub")]
+        void cmd_UnsubTradeChat(BasePlayer player, string cmd, string[] args)
+        {
+            if (allTradeChatIDs.doesExist(player.UserIDString) == false)
+            {
+                allTradeChatIDs.addPlayer(player.UserIDString);
+                PrintToChat(player, "Unsubbed from trade chat.");
+            }
+            else
+                PrintToChat(player, "You aren't signed up to tradechat");
+        }
+
         [ChatCommand("t")]
         void cmd_PostIntoTradeChat(BasePlayer player, string cmd, string[] args)
         {
-            bool firstTime = false;
-
             if (allMutedPlayers.isMuted(player.UserIDString) == false)
             {
-                if (allTradeChatIDs.doesExist(player.UserIDString) == false)
-                {
-                    allTradeChatIDs.addPlayer(player.UserIDString);
-                    PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
-                    firstTime = true;
-                }
-
                 if (anyArgsCheck(args))
                 {
+                    if (allTradeChatIDs.doesExist(player.UserIDString))
+                    {
+                        allTradeChatIDs.removePlayer(player.UserIDString);
+                        PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
+                    }
+
                     string msg = "";
 
                     for (int i = 0; i < args.Length; i++)
@@ -757,20 +807,20 @@ namespace Oxide.Plugins
 
                     Puts("[Trade Chat] " + player.displayName + ": " + msg);
 
-                    foreach (string playerID in allTradeChatIDs.list_TradeChatIDs)
+                    foreach (var p in BasePlayer.activePlayerList)
                     {
-                        var foundPlayer = rust.FindPlayer(playerID);
-
-                        if (foundPlayer != null)
+                        if (allTradeChatIDs.doesExist(p.UserIDString) == false)
                         {
-                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                            var foundPlayer = rust.FindPlayer(p.UserIDString);
+
+                            if (foundPlayer != null)
+                            {
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                            }
                         }
                     }
-                }
-                else
-                {
-                    if (firstTime != true)
-                        PrintToChat(player, "You are already subscribed to tradechat.");
+
+                    metric_tradeMessages++;
                 }
 
             }// If not on the mute list
@@ -795,18 +845,6 @@ namespace Oxide.Plugins
                     TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                 }
             }
-        }
-
-        [ChatCommand("unsub")]
-        void cmd_UnsubTradeChat(BasePlayer player, string cmd, string[] args)
-        {
-            if (allTradeChatIDs.doesExist(player.UserIDString))
-            {
-                allTradeChatIDs.removePlayer(player.UserIDString);
-                PrintToChat(player, "Unsubbed from trade chat.");
-            }
-            else
-                PrintToChat(player, "You aren't signed up to tradechat");
         }
 
         class TradeChatData
@@ -898,6 +936,8 @@ namespace Oxide.Plugins
                     }
                 }
 
+                metric_clanMessages++;
+
                 Puts("[CLAN CHAT] " + player.displayName + ": " + msg);
             }
             else
@@ -930,11 +970,11 @@ namespace Oxide.Plugins
                     page = 0;
                 else
                     page = page - 1;
-                
+
                 startCount = page * PAGESIZE;
 
                 string clist = "Clan List -- " + allClans.clansList.Count + " clans exist " + "\nPage " + (page + 1) + " Showing " + startCount + " / " + (startCount + 10);
-                
+
                 foreach (ClanObj clan in allClans.clansList)
                 {
                     if (count >= startCount && count <= (startCount + PAGESIZE) && count < allClans.clansList.Count)
@@ -967,7 +1007,7 @@ namespace Oxide.Plugins
                     PrintToChat(player, "You have no pending invites.");
                 #endregion
             }
-            else if(argsCheck(args,1))
+            else if (argsCheck(args, 1))
             {
                 #region args 1
                 string choice = args[0].ToUpper();
@@ -1064,7 +1104,7 @@ namespace Oxide.Plugins
 
                 #endregion
             }
-            else if(argsCheck(args,2))
+            else if (argsCheck(args, 2))
             {
                 #region args 2
 
@@ -1072,7 +1112,7 @@ namespace Oxide.Plugins
                 string tag = args[1].ToUpper();
 
                 #region Clan Dismantle
-               
+
                 ClanObj c;
 
                 if (choice == "DISMANTLE")
@@ -1169,7 +1209,7 @@ namespace Oxide.Plugins
                             {
                                 allClans.leaveClan(foundPlayer.UserIDString);
 
-                                if(list_UserToClanTags.ContainsKey(foundPlayer.UserIDString))
+                                if (list_UserToClanTags.ContainsKey(foundPlayer.UserIDString))
                                     list_UserToClanTags.Remove(foundPlayer.UserIDString);
 
                                 SaveClanData();
@@ -1190,7 +1230,7 @@ namespace Oxide.Plugins
 
                 #endregion
             }
-            else if (argsCheck(args,3))
+            else if (argsCheck(args, 3))
             {
                 #region args 3
 
@@ -1465,6 +1505,8 @@ namespace Oxide.Plugins
                     PrintToChat(player, "Please enter proper arguments. Example /online Andy");
                 }
             }
+
+            metric_pokes++;
         }
         #endregion
 
@@ -1502,6 +1544,8 @@ namespace Oxide.Plugins
                             rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
 
                             UpdateLastReplied(player, foundPlayer);
+
+                            metric_privateMessages++;
                         }
                         else
                             PrintToChat(player, "You can't PM yourself.");
@@ -1600,14 +1644,14 @@ namespace Oxide.Plugins
             try
             {
                 if (args[0] == "")
-                return false;
+                    return false;
             }
             catch { return false; }
 
             return true;
         }
 
-        bool argsCheck(string[] args,int count)
+        bool argsCheck(string[] args, int count)
         {
             Puts("Args Len: " + args.Length + " count: " + count);
 
@@ -1619,7 +1663,7 @@ namespace Oxide.Plugins
                 if (args[0] == null)
                     return false;
             }
-            catch{ return false;}
+            catch { return false; }
 
             try
             {
@@ -1698,6 +1742,12 @@ namespace Oxide.Plugins
             Config["ColorTradeChat"] = Color_TradeText;
             Config["ColorPMTag"] = Color_PrivateMessageTag;
             Config["AutoMute"] = autoMute;
+
+            Config["Metric_PrivateMessages"] = metric_privateMessages;
+            Config["Metric_ClanMessages"] = metric_clanMessages;
+            Config["Metric_TradeMessages"] = metric_tradeMessages;
+            Config["Metric_AllMessages"] = metric_allMessages;
+            Config["Metric_Pokes"] = metric_pokes;
 
             SaveConfig();
 
