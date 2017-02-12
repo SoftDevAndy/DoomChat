@@ -70,8 +70,9 @@ namespace Oxide.Plugins
             msg += "\n/poke <playername> - Check if a user if online or offline.";
             msg += "\n/pm <playername> - Private message a player if they are online.";
             msg += "\n/r - Reply to the last person who messaged you.";
+            msg += "\n/diceroll <playername> <playername> etc - Rolls dice.";
             msg += "\n/automute <bool> - Switches automute on or off.";
-            msg += "\n/metrics  - Shows Chat Metrics.";
+            msg += "\n/metrics - Shows Chat Metrics.";
             msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
             return msg;
         }
@@ -154,6 +155,8 @@ namespace Oxide.Plugins
             msg += "\n\n<color=red>Trade Chat</color>";
             msg += "\n/t <text> - Post in trade chat.";
             msg += "\n/unsub - Unsubscribe from trade chat.";
+            msg += "\n\n<color=red>Other</color>";
+            msg += "\n/diceroll <playername> <playername> etc - Rolls dice.";
             msg += "\n\n<color=grey>[DoomTown Chat Commands]</color>";
             return msg;
         }
@@ -236,8 +239,6 @@ namespace Oxide.Plugins
                     list_UserToClanTags.Add(player.UserIDString, clanName);
             }
 
-            Puts("Server just loaded");
-
         }// Loading in the values from the configuration file and registering all moderators to the moderatorid list
 
         void OnServerSave()
@@ -247,8 +248,6 @@ namespace Oxide.Plugins
             SaveConfigurationChanges();
             SaveMuteList();
             SaveTradeChat();
-
-            Puts("Server just saved. DoomChat data files and it's configuration file was also saved.");
         }
 
         protected override void LoadDefaultConfig()
@@ -385,7 +384,50 @@ namespace Oxide.Plugins
             return true;
         }
 
-        #endregion            
+        #endregion
+
+        #region DiceRoll
+
+        [ChatCommand("diceroll")]
+        void cmd_DiceRoll(BasePlayer player, string cmd, string[] args)
+        {
+            if (anyArgsCheck(args))
+            {
+                Dictionary<string, int> nameNumber = new Dictionary<string, int>();
+                System.Random r = new System.Random();
+                string message = "<color=orange>Dice Rolled</color> - <color=yellow>Winner is closest to 100</color>\n";
+
+                string WinnerName = player.displayName;
+
+                int num = r.Next(100);
+
+                nameNumber.Add(player.displayName, num);
+                message += player.displayName + " --  [ " + num + " ]\n";
+
+                foreach (string name in args)
+                {
+                    if (IsOnlineAndValid(player,name))
+                    { 
+                        if (nameNumber.ContainsKey(name) == false)
+                        {
+                            num = r.Next(100);
+                            nameNumber.Add(name, num);
+                            message += name + " --  [ " + num + " ]\n";
+                        }
+                    }
+                }
+
+                foreach(KeyValuePair<string,int> kv in nameNumber)
+                {
+                    var foundPlayer = rust.FindPlayer(kv.Key);
+
+                    if(foundPlayer != null)
+                        rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
+                }
+            }
+        }
+
+        #endregion
 
         #region Word Filter System
 
@@ -1654,8 +1696,6 @@ namespace Oxide.Plugins
 
         bool argsCheck(string[] args, int count)
         {
-            Puts("Args Len: " + args.Length + " count: " + count);
-
             if (args == null)
                 return false;
 
