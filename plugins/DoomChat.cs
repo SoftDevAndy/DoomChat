@@ -410,18 +410,25 @@ namespace Oxide.Plugins
                 foreach (string name in args)
                 {
                     if (IsOnlineAndValid(player,name))
-                    { 
-                        if (nameNumber.ContainsKey(name) == false)
+                    {
+                        var foundPlayer = rust.FindPlayer(name);
+
+                        if (foundPlayer != null)
                         {
-                            num = r.Next(100);
-                            nameNumber.Add(name, num);
-                            message += name + " --  [ " + num + " ]\n";
+                            if (nameNumber.ContainsKey(foundPlayer.displayName) == false)
+                            {
+                                num = r.Next(100);
+                                nameNumber.Add(foundPlayer.displayName, num);
+                                message += foundPlayer.displayName + " --  [ " + num + " ]\n";
+                            }
                         }
                     }
                 }
 
                 foreach(KeyValuePair<string,int> kv in nameNumber)
                 {
+                    Puts("Sending message too: " + kv.Key);
+
                     var foundPlayer = rust.FindPlayer(kv.Key);
 
                     if(foundPlayer != null)
