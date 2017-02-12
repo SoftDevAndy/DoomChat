@@ -50,6 +50,7 @@ namespace Oxide.Plugins
         private int metric_tradeMessages = 0;
         private int metric_allMessages = 0;
         private int metric_pokes = 0;
+        private int metric_diceRolls = 0;
 
         /* End of Global Variables */
 
@@ -70,7 +71,7 @@ namespace Oxide.Plugins
             msg += "\n/poke <playername> - Check if a user if online or offline.";
             msg += "\n/pm <playername> - Private message a player if they are online.";
             msg += "\n/r - Reply to the last person who messaged you.";
-            msg += "\n/diceroll <playername> <playername> etc - Rolls dice.";
+            msg += "\n/rolldice <playername> <playername> etc - Rolls dice.";
             msg += "\n/automute <bool> - Switches automute on or off.";
             msg += "\n/metrics - Shows Chat Metrics.";
             msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
@@ -86,6 +87,7 @@ namespace Oxide.Plugins
             msg += "\n\n - Trade Messages: " + metric_tradeMessages;
             msg += "\n\n - All Messages: " + metric_allMessages;
             msg += "\n\n - Pokes: " + metric_pokes;
+            msg += "\n\n - DiceRolls: " + metric_diceRolls;
             msg += "\n\n<color=grey>[DoomTown Metrics]</color>";
             return msg;
         }
@@ -156,7 +158,7 @@ namespace Oxide.Plugins
             msg += "\n/t <text> - Post in trade chat.";
             msg += "\n/unsub - Unsubscribe from trade chat.";
             msg += "\n\n<color=red>Other</color>";
-            msg += "\n/diceroll <playername> <playername> etc - Rolls dice.";
+            msg += "\n/rolldice <playername> <playername> etc - Rolls dice.";
             msg += "\n\n<color=grey>[DoomTown Chat Commands]</color>";
             return msg;
         }
@@ -274,6 +276,7 @@ namespace Oxide.Plugins
             metric_tradeMessages = Config.Get<int>("Metric_TradeMessages");
             metric_allMessages = Config.Get<int>("Metric_AllMessages");
             metric_pokes = Config.Get<int>("Metric_Pokes");
+            metric_diceRolls = Config.Get<int>("Metric_DiceRolls");
 
             foreach (string w in bwords)
             {
@@ -386,9 +389,9 @@ namespace Oxide.Plugins
 
         #endregion
 
-        #region DiceRoll
+        #region RollDice
 
-        [ChatCommand("diceroll")]
+        [ChatCommand("rolldice")]
         void cmd_DiceRoll(BasePlayer player, string cmd, string[] args)
         {
             if (anyArgsCheck(args))
@@ -424,6 +427,12 @@ namespace Oxide.Plugins
                     if(foundPlayer != null)
                         rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
                 }
+
+                metric_pokes++;
+            }
+            else
+            {
+                PrintToChat(player, "To roll dice please follow the format.\nE.g /diceroll Andy 8bit hogan");
             }
         }
 
@@ -1789,6 +1798,7 @@ namespace Oxide.Plugins
             Config["Metric_TradeMessages"] = metric_tradeMessages;
             Config["Metric_AllMessages"] = metric_allMessages;
             Config["Metric_Pokes"] = metric_pokes;
+            Config["Metric_DiceRolls"] = metric_diceRolls;
 
             SaveConfig();
 
