@@ -421,7 +421,7 @@ namespace Oxide.Plugins
                             {
                                 allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
 
-                                PrintToChat(player, "You have ignored player " + foundPlayer.displayName);
+                                PrintToChat(player, "You have ignored player " + foundPlayer.displayName + ".");
                             }
                             else
                                 PrintToChat(player, "You can't ignore yourself...*sad music*");
@@ -448,7 +448,7 @@ namespace Oxide.Plugins
                             if (foundPlayer.UserIDString != player.UserIDString)
                             {
                                 allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
-                                PrintToChat(player, "You have unignored player " + foundPlayer.displayName);
+                                PrintToChat(player, "You have unignored player " + foundPlayer.displayName + ".");
                             }
                             else
                                 PrintToChat(player, "You can't unignore yourself...*sad music*");
@@ -466,7 +466,7 @@ namespace Oxide.Plugins
         {
             foreach (var playerIgnoring in BasePlayer.activePlayerList)
             {
-                if (allIgnoreData.isIgnoringPeople(playerIgnoring.displayName))
+                if (allIgnoreData.isIgnoringPeople(playerIgnoring.UserIDString))
                 {
                     if (allIgnoreData.isIgnoringPlayer(playerIgnoring.UserIDString, playerTalking.Id) == false)
                     {
@@ -1383,7 +1383,7 @@ namespace Oxide.Plugins
                             {
                                 message += foundPlayer.displayName;
 
-                                if (count > 1)
+                                if (count > 0)
                                     message += " , ";
 
                                 if (count != 0 && count % 5 == 0)
@@ -1895,10 +1895,12 @@ namespace Oxide.Plugins
 
                             Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
-                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
+                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString); // Player to himself
 
-                            if(allIgnoreData.isIgnoringPlayer(player.UserIDString,foundPlayer.UserIDString) == false)
-                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                            if (allIgnoreData.isIgnoringPlayer(foundPlayer.UserIDString, player.UserIDString) == false)
+                            {
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString); // Player to user
+                            }
 
                             UpdateLastReplied(player, foundPlayer);
 
