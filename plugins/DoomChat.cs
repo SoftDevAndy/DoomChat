@@ -1381,10 +1381,7 @@ namespace Oxide.Plugins
 
                             if (foundPlayer != null)
                             {
-                                message += foundPlayer.displayName;
-
-                                if (count > 0)
-                                    message += " , ";
+                                message += foundPlayer.displayName + " , ";
 
                                 if (count != 0 && count % 5 == 0)
                                     message += "\n";
