@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "2.2.2")]
+    [Info("DoomChat", "SoftDevAndy & wski", "3.0.1")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -19,6 +19,7 @@ namespace Oxide.Plugins
         private ClanData allClans = new ClanData();
         private InviteData allInvites = new InviteData();
         private TradeChatData allTradeChatIDs = new TradeChatData();
+        private IgnoreData allIgnoreData = new IgnoreData();
 
         private System.Random rnd = new System.Random();
 
@@ -74,6 +75,8 @@ namespace Oxide.Plugins
             msg += "\n/rolldice <playername> <playername> etc - Rolls dice.";
             msg += "\n/automute <bool> - Switches automute on or off.";
             msg += "\n/metrics - Shows Chat Metrics.";
+            msg += "\n/ignore <playername> - Ignore Player.";
+            msg += "\n/unignore <playername> - Unignore Player.";
             msg += "\n\n<color=grey>[DoomTown Admin Chat Commands]</color>";
             return msg;
         }
@@ -132,6 +135,7 @@ namespace Oxide.Plugins
             msg += "\n/clan create <tag letters> <hex colour> - Create a clan.";
             msg += "\n/clan invite <playername> - Invites player to clan.";
             msg += "\n/clan - Shows current invite if any.";
+            msg += "\n/clan online - Show's who's online in your clan.";
             msg += "\n/clan accept - Join clan if you have an invite.";
             msg += "\n/clan decline - Join clan if you have an invite.";
             msg += "\n/clan leave - Leave a clan if you are in one.";
@@ -159,6 +163,8 @@ namespace Oxide.Plugins
             msg += "\n/unsub - Unsubscribe from trade chat.";
             msg += "\n\n<color=red>Other</color>";
             msg += "\n/rolldice <playername> <playername> etc - Rolls dice.";
+            msg += "\n/ignore <playername> - Ignore Player.";
+            msg += "\n/unignore <playername> - Unignore Player.";
             msg += "\n\n<color=grey>[DoomTown Chat Commands]</color>";
             return msg;
         }
@@ -220,6 +226,7 @@ namespace Oxide.Plugins
             allInvites = Interface.Oxide.DataFileSystem.ReadObject<InviteData>("DoomChat_Clans_Invites");
             allMutedPlayers = Interface.Oxide.DataFileSystem.ReadObject<MutedData>("DoomChat_MutedPlayers");
             allTradeChatIDs = Interface.Oxide.DataFileSystem.ReadObject<TradeChatData>("DoomChat_TradeChat");
+            allIgnoreData = Interface.Oxide.DataFileSystem.ReadObject<IgnoreData>("DoomChat_IgnoreData");
 
             var Online = BasePlayer.activePlayerList as List<BasePlayer>;
 
@@ -250,6 +257,7 @@ namespace Oxide.Plugins
             SaveConfigurationChanges();
             SaveMuteList();
             SaveTradeChat();
+            SaveIgnoreData();
         }
 
         protected override void LoadDefaultConfig()
@@ -353,7 +361,9 @@ namespace Oxide.Plugins
                 {
                     styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + Message_ScoldText + "</color>";
 
-                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+
+                    ChatWithIgnore(player, styled);
 
                     TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, false);
                 }
@@ -366,7 +376,9 @@ namespace Oxide.Plugins
                     else
                         styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + message + "</color>";
 
-                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+
+                    ChatWithIgnore(player, styled);
                 }
 
                 Puts(player.Name + ": " + message);
@@ -376,7 +388,10 @@ namespace Oxide.Plugins
                 if (allMutedPlayers.mutedStatus(player.Id) == false)
                 {
                     styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + muteText(message) + "</color>";
-                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+
+                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+
+                    ChatWithIgnore(player, styled);
                 }
 
                 TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
@@ -385,6 +400,231 @@ namespace Oxide.Plugins
             metric_allMessages++;
 
             return true;
+        }
+
+        #endregion
+
+        #region Ignore System
+
+        [ChatCommand("ignore")]
+        void cmd_IgnoreUser(BasePlayer player, string cmd, string[] args)
+        {
+            if (argsCheck(args, 1))
+            {
+                var foundPlayer = rust.FindPlayer(args[0]);
+
+                if (foundPlayer != null)
+                {
+                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString) == false)
+                    {
+                            if (foundPlayer.UserIDString != player.UserIDString)
+                            {
+                                allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
+
+                                PrintToChat(player, "You have ignored player " + foundPlayer.displayName);
+                            }
+                            else
+                                PrintToChat(player, "You can't ignore yourself...*sad music*");
+                    }
+                    else
+                        PrintToChat(player, "You are already ignoring that person.");
+                }
+            }
+            else
+                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
+        }
+
+        [ChatCommand("unignore")]
+        void cmd_UnignoreUser(BasePlayer player, string cmd, string[] args)
+        {
+            var foundPlayer = rust.FindPlayer(args[0]);
+
+            if (argsCheck(args, 1))
+            {
+                if (foundPlayer != null)
+                {
+                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString))
+                    {
+                            if (foundPlayer.UserIDString != player.UserIDString)
+                            {
+                                allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
+                                PrintToChat(player, "You have unignored player " + foundPlayer.displayName);
+                            }
+                            else
+                                PrintToChat(player, "You can't unignore yourself...*sad music*");
+            
+                    }
+                    else
+                        PrintToChat(player, "You don't have this player ignored.");
+                }
+            }
+            else
+                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
+        }
+
+        void ChatWithIgnore(IPlayer playerTalking, string theirMessage)
+        {
+            foreach (var playerIgnoring in BasePlayer.activePlayerList)
+            {
+                if (allIgnoreData.isIgnoringPeople(playerIgnoring.displayName))
+                {
+                    if (allIgnoreData.isIgnoringPlayer(playerIgnoring.UserIDString, playerTalking.Id) == false)
+                    {
+                        rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
+                    }
+                }
+                else
+                {
+                    rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
+                }
+            }
+        }
+
+        void SaveIgnoreData()
+        {
+            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_IgnoreData", allIgnoreData);
+        }
+
+        class IgnoreData
+        {
+            public List<IgnoreOb> allIgnoreData { get; set; }
+
+            public IgnoreData()
+            {
+                allIgnoreData = new List<IgnoreOb>();
+            }
+
+            public bool isIgnoringPeople(string userID)
+            {
+                if (allIgnoreData.Contains(new IgnoreOb(userID)))
+                    return true;
+                else
+                    return false;
+            }
+
+            public bool isIgnoringPlayer(string player, string ignoredPlayer)
+            {
+                foreach (IgnoreOb o in allIgnoreData)
+                {
+                    if (player == o.userID)
+                    {
+                        if (o.isIgnoringPlayer(ignoredPlayer))
+                            return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public IgnoreOb getPlayer(string p)
+            {
+                foreach (IgnoreOb o in allIgnoreData)
+                {
+                    if (o.userID == p)
+                        return o;
+                }
+
+                return null;
+            }
+
+            public void ignorePlayer(string player, string ignoredPlayer)
+            {
+                IgnoreOb p = new IgnoreOb(player);
+
+                if (allIgnoreData.Contains(p) == false)
+                {
+                    p.ignoreList.Add(ignoredPlayer);
+
+                    allIgnoreData.Add(p);
+
+                    //Puts("Player Ignored");
+                }
+                else
+                {
+                    foreach (IgnoreOb o in allIgnoreData)
+                    {
+                        if (o.userID == player)
+                        {
+                            if(o.ignoreList.Contains(ignoredPlayer) == false)
+                                o.ignoreList.Add(ignoredPlayer);
+
+                            //Puts("Player Ignored"); 
+                        }
+                    }
+                }
+            }
+
+            public void unIgnorePlayer(string player, string ignoredPlayer)
+            {
+                foreach(IgnoreOb p in allIgnoreData)
+                {
+                    if(p.userID == player)
+                    {
+                        if (p.ignoreList.Contains(ignoredPlayer))
+                            p.ignoreList.Remove(ignoredPlayer);
+                    }
+                }
+            }
+        }
+
+        class IgnoreOb
+        {
+            public string userID { get; set; }
+            public HashSet<string> ignoreList { get; set; }
+
+            public IgnoreOb(string userID)
+            {
+                ignoreList = new HashSet<string>();
+                this.userID = userID;
+            }
+
+            public void ignorePlayer(string id)
+            {
+                if (ignoreList.Contains(id))
+                    ignoreList.Remove(id);
+            }
+
+            public void unignorePlayer(string id)
+            {
+                if (ignoreList.Contains(id) == false)
+                    ignoreList.Add(id);
+            }
+
+            public bool isIgnoringPlayer(string id)
+            {
+                if (ignoreList == null)
+                    return false;
+
+                if (ignoreList.Contains(id))
+                    return true;
+
+                return false;
+            }
+
+            public override bool Equals(object obj)
+            {
+                var item = obj as IgnoreOb;
+
+                if (this.userID != null && item != null)
+                {
+                    if (this.userID != "")
+                    {
+                        if (this.userID == item.userID)
+                            return true;
+                        else
+                            return false;
+                    }
+                    else
+                        return false;
+                }
+                else
+                    return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return userID.GetHashCode();
+            }
         }
 
         #endregion
@@ -409,7 +649,7 @@ namespace Oxide.Plugins
 
                 foreach (string name in args)
                 {
-                    if (IsOnlineAndValid(player,name))
+                    if (IsOnlineAndValid(player, name))
                     {
                         var foundPlayer = rust.FindPlayer(name);
 
@@ -425,13 +665,13 @@ namespace Oxide.Plugins
                     }
                 }
 
-                foreach(KeyValuePair<string,int> kv in nameNumber)
+                foreach (KeyValuePair<string, int> kv in nameNumber)
                 {
                     Puts("Sending message too: " + kv.Key);
 
                     var foundPlayer = rust.FindPlayer(kv.Key);
 
-                    if(foundPlayer != null)
+                    if (foundPlayer != null)
                         rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
                 }
 
@@ -963,6 +1203,20 @@ namespace Oxide.Plugins
                 return false;
         }
 
+        private void TellClan(BasePlayer player, ClanObj clan, string fullMsg)
+        {
+            foreach (string member in clan.members)
+            {
+                if (IsOnlineAndValid(player, member))
+                {
+                    var foundPlayer = rust.FindPlayer(member);
+
+                    if (foundPlayer != null)
+                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                }
+            }
+        }
+
         [ChatCommand("c")]
         void cmd_ClanChat(BasePlayer player, string cmd, string[] args)
         {
@@ -1081,6 +1335,8 @@ namespace Oxide.Plugins
                     {
                         PrintToChat(player, "Invite to " + allInvites.pendingInvites[player.UserIDString] + " accepted!");
 
+                        TellClan(player, allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]), "Player " + player.displayName + " has joined the clan.");
+
                         allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]).members.Add(player.UserIDString);
 
                         list_UserToClanTags.Add(player.UserIDString, allInvites.pendingInvites[player.UserIDString]);
@@ -1095,6 +1351,9 @@ namespace Oxide.Plugins
                     if (choice == "DECLINE")
                     {
                         PrintToChat(player, "Invite to " + allInvites.pendingInvites[player.UserIDString] + " declined!");
+
+                        TellClan(player, allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]), "Player " + player.displayName + " has declined the clan invite.");
+
                         allInvites.pendingInvites.Remove(player.UserIDString);
 
                         action = true;
@@ -1103,6 +1362,43 @@ namespace Oxide.Plugins
                     }
                     #endregion
                 }
+
+                #region Clan Online List
+                if (choice == "ONLINE")
+                {
+                    string clanTag = allClans.getPlayerClan(player.UserIDString);
+                    string message = "";
+
+                    if (clanTag != "")
+                    {
+                        int count = 0;
+
+                        message = "<color=orange>Clan Members Online for [" + clanTag + "]</color> - <color=yellow>[ " + allClans.getClanByTag(clanTag).members.Count + " ] Online</color>\n";
+
+                        foreach (string s in allClans.getClanByTag(clanTag).members)
+                        {
+                            var foundPlayer = rust.FindPlayer(s);
+
+                            if (foundPlayer != null)
+                            {
+                                message += foundPlayer.displayName;
+
+                                if (count > 1)
+                                    message += " , ";
+
+                                if (count != 0 && count % 5 == 0)
+                                    message += "\n";
+
+                                count++;
+                            }
+                        }
+
+                        PrintToChat(player, message);
+                    }
+
+                    action = true;
+                }
+                #endregion
 
                 #region Clan Leave
                 if (choice == "LEAVE")
@@ -1144,6 +1440,8 @@ namespace Oxide.Plugins
                     {
                         PrintToChat(player, "You have left the clan " + clanname + " .");
 
+                        TellClan(player, allClans.getClanByTag(clanname), "Player " + player.displayName + " has left the clan.");
+
                         allClans.leaveClan(player.UserIDString);
 
                         if (list_UserToClanTags.ContainsKey(player.UserIDString))
@@ -1156,7 +1454,7 @@ namespace Oxide.Plugins
 
                 if (!action)
                 {
-                    PrintToChat(player, "Bad or missing arguements: /clan " + args[0]);
+                    PrintToChat(player, "Bad or missing argument : /clan " + args[0]);
                 }
 
                 #endregion
@@ -1272,6 +1570,9 @@ namespace Oxide.Plugins
                                     list_UserToClanTags.Remove(foundPlayer.UserIDString);
 
                                 SaveClanData();
+
+                                TellClan(player, allClans.getClanByTag(allClans.getPlayerClan(foundPlayer.UserIDString)), "Player " + player.displayName + " has left the clan.");
+
                                 PrintToChat(player, "Player " + foundPlayer.displayName + " has been kicked from the clan.");
                             }
                             else
@@ -1542,28 +1843,23 @@ namespace Oxide.Plugins
         [ChatCommand("poke")]
         void cmd_CheckOnline(BasePlayer player, string cmd, string[] args)
         {
-            if (args != null)
+            if (argsCheck(args, 1))
             {
-                if (args[0] != null)
+                if (IsOnlineAndValid(player, args[0]))
                 {
-                    if (IsOnlineAndValid(player, args[0]))
-                    {
-                        string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
+                    string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
 
-                        PrintToChat(player, online);
-                    }
-                    else
-                    {
-                        string offline = "<color=red>" + args[0] + " is offline.</color>";
-
-                        PrintToChat(player, offline);
-                    }
+                    PrintToChat(player, online);
                 }
                 else
                 {
-                    PrintToChat(player, "Please enter proper arguments. Example /online Andy");
+                    string offline = "<color=red>" + args[0] + " is offline.</color>";
+
+                    PrintToChat(player, offline);
                 }
             }
+            else
+                PrintToChat(player, "Please enter proper arguments. Example /online Andy");
 
             metric_pokes++;
         }
@@ -1600,7 +1896,9 @@ namespace Oxide.Plugins
                             Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
                             rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
-                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+
+                            if(allIgnoreData.isIgnoringPlayer(player.UserIDString,foundPlayer.UserIDString) == false)
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
 
                             UpdateLastReplied(player, foundPlayer);
 
