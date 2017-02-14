@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "3.0.1")]
+    [Info("DoomChat", "SoftDevAndy & wski", "3.0.2")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -659,7 +659,7 @@ namespace Oxide.Plugins
                             {
                                 num = r.Next(100);
                                 nameNumber.Add(foundPlayer.displayName, num);
-                                message += foundPlayer.displayName + " --  [ " + num + " ]\n";
+                                message += "\n" + foundPlayer.displayName + "--  [ " + num + " ]";
                             }
                         }
                     }
@@ -679,7 +679,7 @@ namespace Oxide.Plugins
             }
             else
             {
-                PrintToChat(player, "To roll dice please follow the format.\nE.g /diceroll Andy 8bit hogan");
+                PrintToChat(player, "To roll dice please follow the format.\nE.g /rolldice Andy 8bit hogan");
             }
         }
 
@@ -1561,14 +1561,14 @@ namespace Oxide.Plugins
                         {
                             if (foundPlayer != player)
                             {
+                                TellClan(player, allClans.getClanByTag(allClans.getPlayerClan(foundPlayer.UserIDString)), "Player " + player.displayName + " has left the clan.");
+
                                 allClans.leaveClan(foundPlayer.UserIDString);
 
                                 if (list_UserToClanTags.ContainsKey(foundPlayer.UserIDString))
                                     list_UserToClanTags.Remove(foundPlayer.UserIDString);
 
                                 SaveClanData();
-
-                                TellClan(player, allClans.getClanByTag(allClans.getPlayerClan(foundPlayer.UserIDString)), "Player " + player.displayName + " has left the clan.");
 
                                 PrintToChat(player, "Player " + foundPlayer.displayName + " has been kicked from the clan.");
                             }
