@@ -1381,12 +1381,15 @@ namespace Oxide.Plugins
 
                             if (foundPlayer != null)
                             {
-                                message += foundPlayer.displayName + " , ";
+                                if (IsOnlineAndValid(player, s))
+                                {
+                                    message += foundPlayer.displayName + " , ";
 
-                                if (count != 0 && count % 5 == 0)
-                                    message += "\n";
+                                    if (count != 0 && count % 5 == 0)
+                                        message += "\n";
 
-                                count++;
+                                    count++;
+                                }
                             }
                         }
 
