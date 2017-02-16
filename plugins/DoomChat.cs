@@ -5,8 +5,8 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "3.0.3")]
-    [Description("Custom Chat Plugin for DoomTown Rust Server")]
+    [Info("DoomChat", "SoftDevAndy & wski", "1.0.0")]
+    [Description("Custom Chat Plugin for the DoomTown.io Rust Server")]
     class DoomChat : RustPlugin
     {
         private HashSet<string> list_FilteredWords = new HashSet<string>();
@@ -1121,6 +1121,8 @@ namespace Oxide.Plugins
 
                 metric_clanMessages++;
 
+                // Log the message to console
+
                 Puts("[CLAN CHAT] " + player.displayName + ": " + msg);
             }
             else
@@ -1132,6 +1134,8 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
+                // Admin command that displays the clan list privately
+
                 const int PAGESIZE = 10;
                 bool valid = true;
 
@@ -1144,6 +1148,8 @@ namespace Oxide.Plugins
                     if (valid)
                         page = Convert.ToInt32(args[0]);
                 }
+
+                // Parse the page number e.g /clans 2
 
                 int count = 0;
                 int startCount = 0;
@@ -1160,13 +1166,17 @@ namespace Oxide.Plugins
 
                 foreach (ClanObj clan in allClans.clansList)
                 {
+                    // Foreach clan, get the clan count
+
                     if (count >= startCount && count <= (startCount + PAGESIZE) && count < allClans.clansList.Count)
                         clist = clist + "\n<color=" + clan.tagColor + ">" + clan.tag + "</color> ---- Members: " + clan.members.Count;
 
                     ++count;
-                }
+                }                             
 
                 PrintToChat(player, clist);
+
+                // Build up the clan list string and print it to chat
             }
             else
                 NoPerms(player, args[0]);
@@ -1184,6 +1194,8 @@ namespace Oxide.Plugins
                 #region args 0
                 if (allInvites.pendingInvites.ContainsKey(player.UserIDString))
                 {
+                    // If the player types in /clan it will display if they have an invite or not
+
                     PrintToChat(player, "You have a pending invite from the clan " + allInvites.pendingInvites[player.UserIDString] + " .");
                 }
                 else
@@ -1201,34 +1213,58 @@ namespace Oxide.Plugins
                     #region Clan Invite / Clan Decline
                     PrintToChat(player, "You have a pending invite from clan " + allInvites.pendingInvites[player.UserIDString]);
 
+                    // If the player has an invite
+
                     if (choice == "ACCEPT")
                     {
+                        // If the argument passed was accept
+
                         PrintToChat(player, "Invite to " + allInvites.pendingInvites[player.UserIDString] + " accepted!");
+
+                        // Tell the player they have been accepted into the clan
 
                         TellClan(player, allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]), "Player " + player.displayName + " has joined the clan.");
 
+                        // Tell the clan the player joined
+
                         allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]).members.Add(player.UserIDString);
+
+                        // Update the clan information
 
                         list_UserToClanTags.Add(player.UserIDString, allInvites.pendingInvites[player.UserIDString]);
 
+                        // Update the players clan tag on the fly
+
                         allInvites.pendingInvites.Remove(player.UserIDString);
+
+                        // Remove the invitation
 
                         action = true;
                         SaveInviteData();
                         SaveClanData();
+
+                        // Save changes to file
                     }
 
                     if (choice == "DECLINE")
                     {
                         PrintToChat(player, "Invite to " + allInvites.pendingInvites[player.UserIDString] + " declined!");
 
+                        // Tell the player they have declined the invite
+
                         TellClan(player, allClans.getClanByTag(allInvites.pendingInvites[player.UserIDString]), "Player " + player.displayName + " has declined the clan invite.");
 
+                        // Tell the clan the player has declined the invite
+
                         allInvites.pendingInvites.Remove(player.UserIDString);
+
+                        // Remove the pending invite
 
                         action = true;
                         SaveInviteData();
                         SaveClanData();
+
+                        // Save the changes to file
                     }
                     #endregion
                 }
@@ -1236,27 +1272,41 @@ namespace Oxide.Plugins
                 #region Clan Online List
                 if (choice == "ONLINE")
                 {
+                    // Displays who's currently online in the clan
+
                     string clanTag = allClans.getPlayerClan(player.UserIDString);
                     string message = "";
 
                     if (clanTag != "")
                     {
+                        // Make sure the player is in a clan
+
                         int count = 0;
 
                         foreach (string s in allClans.getClanByTag(clanTag).members)
                         {
+                            // For each member in the clan
+
                             var foundPlayer = rust.FindPlayer(s);
 
                             if (foundPlayer != null)
                             {
                                 if (IsOnlineAndValid(player, s))
                                 {
+                                    // Make sure they are online
+
                                     message += foundPlayer.displayName + " , ";
+
+                                    // Add them to the string
 
                                     if (count != 0 && count % 5 == 0)
                                         message += "\n";
 
+                                    // For every 5 names add a new line
+
                                     count++;
+
+                                    // Track the player
                                 }
                             }
                         }
@@ -1264,6 +1314,8 @@ namespace Oxide.Plugins
                         string premessage = "<color=orange>Clan Members Online for [" + clanTag + "]</color> - <color=yellow>[ " + count + " ] Online</color>\n";
                         
                         PrintToChat(player, premessage + message);
+
+                        // Print the online list to the player
                     }
 
                     action = true;
@@ -1279,8 +1331,14 @@ namespace Oxide.Plugins
                     {
                         ClanObj c = new ClanObj(clanname);
 
+                        // Checks if the player leaving is the clan owner
+
                         if (allClans.clansList.Contains(c))
                         {
+                            // If the clan exists
+
+                            c = allClans.getClanByTag(clanname);
+
                             foreach (KeyValuePair<string, string> kv in allInvites.pendingInvites)
                             {
                                 if (kv.Value == args[0])
@@ -1289,36 +1347,58 @@ namespace Oxide.Plugins
                                 }
                             }
 
+                            // Remove all pending invites
+
                             foreach (string member in allClans.getClanByTag(clanname).members)
                             {
                                 if (list_UserToClanTags.ContainsKey(member))
                                     list_UserToClanTags.Remove(member);
                             }
 
+                            // Remove all the user to clantags records on the fly
+
                             ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled by " + player.displayName + "." });
+
+                            // Tell everyone ther clan has been dismantled
 
                             Puts("Clan " + c.tag + " has been dismantled by " + player.displayName + ".");
 
+                            // Log it into the console
+
                             allClans.clansList.Remove(c);
+
+                            // Remove the clan
 
                             action = true;
                             SaveClanData();
                             SaveInviteData();
+
+                            // Save changes to file
                         }
                     }
                     else
                     {
                         PrintToChat(player, "You have left the clan " + clanname + " .");
 
+                        // Tell the player they left the clan
+
                         TellClan(player, allClans.getClanByTag(clanname), "Player " + player.displayName + " has left the clan.");
 
+                        // Tell the clan they left
+
                         allClans.leaveClan(player.UserIDString);
+
+                        // Remove the player from the clan
 
                         if (list_UserToClanTags.ContainsKey(player.UserIDString))
                             list_UserToClanTags.Remove(player.UserIDString);
 
+                        // Remove the player from the user to clan tags list on the fly
+
                         action = true;
                         SaveClanData();
+
+                        // Save changes to file
                     }
                 }
 
@@ -1346,14 +1426,20 @@ namespace Oxide.Plugins
                 {
                     if (isAdmin(player.UserIDString))
                     {
+                        // Admin command Dismantle, removes trace of a clan
+
                         c = allClans.getClanByTag(tag);
 
                         if (c != null)
                         {
                             if (allClans.clansList.Contains(c))
                             {
+                                // Checks that the clan exists
+
                                 if (allClans.clansList.Remove(c))
                                 {
+                                    // Removes the clan
+
                                     foreach (KeyValuePair<string, string> kv in allInvites.pendingInvites)
                                     {
                                         if (kv.Value == tag)
@@ -1362,9 +1448,17 @@ namespace Oxide.Plugins
                                         }
                                     }
 
-                                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled by " + player.displayName });
+                                    // Removes all pending invites by that clan
+
+                                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled."});
                                     Puts("Clan [" + c.tag + "] has been dismantled by " + player.displayName + ".");
+
+                                    // Alert the server and the console that the clan has been dismantled
+
                                     SaveClanData();
+                                    SaveInviteData();
+
+                                    // Save the clan and invite data
                                 }
                                 else
                                     PrintToChat(player, "Couldn't dismantle the clan for some reason.");
@@ -1384,27 +1478,39 @@ namespace Oxide.Plugins
                 #endregion
 
                 #region Clan Invite
-                if (choice == "INVITE") // /clan invite Andy
+                if (choice == "INVITE")
                 {
                     if (allClans.isOwner(player.UserIDString))
                     {
+                        //If you are an owner of a clan you can send invites to other online players, who aren't in a clan already
+
                         if (IsOnlineAndValid(player, args[1]))
                         {
                             var foundPlayer = rust.FindPlayer(args[1]);
 
                             if (foundPlayer != null)
                             {
+                                //If the player is online
+
                                 if (allClans.isInClan(foundPlayer.UserIDString) == false)
                                 {
+                                    //If the player isn't in a clan already
+
                                     if (allInvites.pendingInvites.ContainsKey(foundPlayer.UserIDString))
                                     {
+                                        //If they have a fight already don't invite them and tell the clan owner
+
                                         PrintToChat(player, "Player already has an invite");
                                     }
                                     else
                                     {
+                                        // Track the pending invite and alert the player and the clan owner about the invite
+
                                         allInvites.pendingInvites.Add(foundPlayer.UserIDString, allClans.getClanByOwner(player.UserIDString).tag);
                                         PrintToChat(player, "Invited player " + foundPlayer.displayName + " to your clan.");
                                         PrintToChat(foundPlayer, "You have a clan invite from " + allClans.getClanByOwner(player.UserIDString).tag);
+
+                                        // Update the invite data to file
 
                                         SaveInviteData();
                                     }
@@ -1428,13 +1534,19 @@ namespace Oxide.Plugins
                 {
                     if (allClans.isOwner(player.UserIDString))
                     {
+                        // As a clan owner enables you to kick the player from the clan
+
                         var foundPlayer = rust.FindPlayer(args[1]);
 
                         if (foundPlayer != null)
                         {
                             if (foundPlayer != player)
                             {
+                                // Make sure you aren't trying to kick yourself and that the player is online
+
                                 TellClan(player, allClans.getClanByTag(allClans.getPlayerClan(foundPlayer.UserIDString)), "Player " + player.displayName + " has left the clan.");
+
+                                // Tell everyone the player has been kicked from the clan
 
                                 allClans.leaveClan(foundPlayer.UserIDString);
 
@@ -1443,7 +1555,11 @@ namespace Oxide.Plugins
 
                                 SaveClanData();
 
+                                // Update clan data
+
                                 PrintToChat(player, "Player " + foundPlayer.displayName + " has been kicked from the clan.");
+
+                                // Tell the clan owner he has kicked the player from the clan
                             }
                             else
                                 PrintToChat(player, "You cannot kick yourself from the clan as owner. Please use /clan leave to dismantle the clan.");
@@ -1473,35 +1589,59 @@ namespace Oxide.Plugins
                     {
                         if (allClans.isInClan(player.UserIDString) == false)
                         {
+                            // If the player isn't in a clan
+
                             string tag = args[1].ToUpper();
                             string hexcolor = args[2];
+
+                            // Parse the clan tag
+                            // Parse the hex color value e.g #aabbcc
 
                             ClanObj c = new ClanObj(tag);
 
                             if (allClans.getClanByTag(tag) != null)
                             {
+                                // If the clan exists already stop
+
                                 PrintToChat(player, "Clan: " + tag + " already exits.");
                             }
                             else
                             {
                                 if (tag.Length >= MINTAGSIZE && tag.Length <= MAXTAGSIZE && IsAlphaNumeric(Convert.ToString(tag)))
                                 {
+                                    // Make sure the clan tag is within a certain size and is alphanumeric
+
                                     if (ValidHex(hexcolor))
                                     {
+                                        // Check that the hex value passed, is valid
+
                                         string userid = player.UserIDString;
                                         string t = tag.ToUpper();
                                         string tagColor = hexcolor;
 
                                         ClanObj clan = new ClanObj(userid, t, tagColor);
 
+                                        // Create a new clan object
+
                                         allClans.clansList.Add(clan);
+
+                                        // Add the clan object 
 
                                         list_UserToClanTags.Add(player.UserIDString, t);
 
+                                        // Add the owner to the user to clan tags list on the fly
+
                                         SaveClanData();
 
-                                        PrintToChat(player, "Clan <color=" + tagColor + ">[" + t + "]</color> has been created by " + player.displayName + ".");
+                                        // Save the changes to file
+
+                                        ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "The Clan " + "<color=" + tagColor + ">" + "[" + tag + "]" + "</color> " + "has been created by " + player.displayName });
+
+                                        // Tell the player they have created the clan
+
                                         Puts("Clan [" + t + "] has been created by " + player.displayName + ".");
+
+                                        // Track the made clan in the console
                                     }
                                     else
                                         PrintToChat(player, CLANERRORMSG);
@@ -1528,7 +1668,8 @@ namespace Oxide.Plugins
             {
                 pendingInvites = new Dictionary<string, string>();
             }
-        }
+
+        }// InviteData
 
         class ClanData
         {
@@ -1650,7 +1791,8 @@ namespace Oxide.Plugins
                     }
                 }
             }
-        }
+
+        }// ClanData
 
         class ClanObj
         {
@@ -1706,7 +1848,8 @@ namespace Oxide.Plugins
             {
                 return tag.ToUpper().GetHashCode();
             }
-        }
+
+        }// ClanObj
         #endregion
 
         #region PM System
@@ -2140,7 +2283,7 @@ namespace Oxide.Plugins
                 {
                     // Checks that the player is online and if they are, tell the player who's poking
 
-                    string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
+                    string online = "<color=#99ff66>[ The player " + IsOnlinePoke(player, args[0]) + " is ONLINE ]</color>";
 
                     PrintToChat(player, online);
                 }
@@ -2148,7 +2291,7 @@ namespace Oxide.Plugins
                 {
                     // If the player is offline tell the player who's poking
 
-                    string offline = "<color=red>" + args[0] + " is offline.</color>";
+                    string offline = "<color=#a9a9a9>[ The player " + args[0] + " is OFFLINE ]</color>";
 
                     PrintToChat(player, offline);
                 }
