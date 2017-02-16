@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "3.0.2")]
+    [Info("DoomChat", "SoftDevAndy & wski", "3.0.3")]
     [Description("Custom Chat Plugin for DoomTown Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -169,6 +169,8 @@ namespace Oxide.Plugins
             return msg;
         }
 
+        // Command Info Text Strings
+
         [ChatCommand("cmd")]
         void cmd_ShowCommands(BasePlayer player, string cmd, string[] args)
         {
@@ -178,12 +180,16 @@ namespace Oxide.Plugins
             }
             else
                 PrintToChat(player, CommandsText_Player());
+
+            // Checks if the user is an admin or not and displays the appropriate command list
         }
 
         [ChatCommand("cmd_player")]
         void cmd_ShowCommands_Player(BasePlayer player, string cmd, string[] args)
         {
             PrintToChat(player, CommandsText_Player());
+
+            // Used for admins to see the default player commands
         }
 
         [ChatCommand("cmd_mute")]
@@ -195,6 +201,8 @@ namespace Oxide.Plugins
             }
             else
                 NoPerms(player, args[0]);
+
+            // Shows all the mute commands to the ADMINS ONLY
         }
 
         [ChatCommand("cmd_filters")]
@@ -206,12 +214,16 @@ namespace Oxide.Plugins
             }
             else
                 NoPerms(player, args[0]);
+
+            // Shows all the filter commands to the ADMINS ONLY
         }
 
         [ChatCommand("cmd_clan")]
         void cmd_ShowCommands_Clans(BasePlayer player, string cmd, string[] args)
         {
             PrintToChat(player, CommandsText_Clans(isAdmin(player.UserIDString)));
+
+            // Shows all the default clan commands to the regular player or the enhanced commands to the admin
         }
         #endregion
 
@@ -220,7 +232,8 @@ namespace Oxide.Plugins
         void Loaded()
         {
             LoadDefaultConfig();
-            FindAddMods();
+
+            // Loading in the values from the configuration file
 
             allClans = Interface.Oxide.DataFileSystem.ReadObject<ClanData>("DoomChat_Clans_Data");
             allInvites = Interface.Oxide.DataFileSystem.ReadObject<InviteData>("DoomChat_Clans_Invites");
@@ -228,36 +241,43 @@ namespace Oxide.Plugins
             allTradeChatIDs = Interface.Oxide.DataFileSystem.ReadObject<TradeChatData>("DoomChat_TradeChat");
             allIgnoreData = Interface.Oxide.DataFileSystem.ReadObject<IgnoreData>("DoomChat_IgnoreData");
 
+            // Loading in the values from the data files
+
             var Online = BasePlayer.activePlayerList as List<BasePlayer>;
 
             foreach (BasePlayer player in Online)
             {
                 if (permission.UserHasGroup(player.UserIDString, "admin") || permission.UserHasGroup(player.UserIDString, "moderator"))
                 {
-                    list_ModeratorIDs.Add(player.UserIDString);
+                    if(list_ModeratorIDs.Contains(player.UserIDString) == false)
+                        list_ModeratorIDs.Add(player.UserIDString);
                 }
 
+                // Adds moderator/admin to moderator list
+                
                 if (allClans.isInClan(player.UserIDString))
                 {
                     list_UserToClanTags.Add(player.UserIDString, allClans.getClanTag(player.UserIDString));
-                }
+                }    
 
-                string clanName = allClans.getPlayerClan(player.UserIDString);
-
-                if (clanName != "" && list_UserToClanTags.ContainsKey(player.UserIDString) == false)
-                    list_UserToClanTags.Add(player.UserIDString, clanName);
+                // Checks if player has a clan tag and tracks it
             }
 
-        }// Loading in the values from the configuration file and registering all moderators to the moderatorid list
+        }
 
         void OnServerSave()
         {
             SaveInviteData();
             SaveClanData();
-            SaveConfigurationChanges();
             SaveMuteList();
             SaveTradeChat();
             SaveIgnoreData();
+
+            // Save Data to files
+            
+            SaveConfigurationChanges();
+
+            // Update Configuration changes
         }
 
         protected override void LoadDefaultConfig()
@@ -290,37 +310,54 @@ namespace Oxide.Plugins
             {
                 list_FilteredWords.Add(w.ToUpper());
             }
+
+            // Loading in all of the data from the /config/DoomChat.json configuration file
         }
 
         void OnPlayerInit(BasePlayer player)
         {
+            // When a player connects to the server
+
             if (permission.UserHasGroup(player.UserIDString, "admin") || permission.UserHasGroup(player.UserIDString, "moderator"))
             {
                 list_ModeratorIDs.Add(player.UserIDString);
             }
+
+            // If they are a moderator, track it
 
             if (allClans.isInClan(player.UserIDString))
             {
                 list_UserToClanTags.Add(player.UserIDString, allClans.getClanTag(player.UserIDString));
             }
 
+            // If they are in a clan, associate their clan id
+
             string clanName = allClans.getPlayerClan(player.UserIDString);
+
+            // Get the players clan name
 
             if (clanName != "")
             {
+                // If they are in a clan
+
                 foreach (string member in allClans.getClanByTag(clanName).members)
                 {
+                    // For each member in the clan
+
                     if (IsOnlineAndValid(player, member))
                     {
+                        // If the member is online
+
                         var foundPlayer = rust.FindPlayer(member);
 
                         if (foundPlayer != null && foundPlayer != player)
                             PrintToChat(foundPlayer, "<color=green>" + player.displayName + "</color> came online.");
+
+                        // Let them know the user came online
                     }
                 }
             }
-
-        }// Checking if the player is a moderator or admin and adding them to the moderator list.
+        }
 
         void OnPlayerDisconnected(BasePlayer player, string reason)
         {
@@ -330,74 +367,107 @@ namespace Oxide.Plugins
             if (list_UserToClanTags.ContainsKey(player.UserIDString))
                 list_UserToClanTags.Remove(player.UserIDString);
 
+            // Removes the player from the moderator tracking list and the playername to tag list
+
             string clanName = allClans.getPlayerClan(player.UserIDString);
+
+            // Get the players clan name
 
             if (clanName != "")
             {
+                // If the player is in a clan
+
                 foreach (string member in allClans.getClanByTag(clanName).members)
                 {
+                    // For each member in the clan
+
                     if (IsOnlineAndValid(player, member))
                     {
+                        // And if that memeber is online
+
                         var foundPlayer = rust.FindPlayer(member);
 
                         if (foundPlayer != null && foundPlayer != player)
                             PrintToChat(foundPlayer, "<color=red>" + player.displayName + "</color> went offline.");
+
+                        // Let them know the user went offline
                     }
                 }
             }
 
-        }// If the player was a moderator or admin and was registed on the moderator list, they are removed on disconnect.
+            // When a player disconnects or loses connection
+        }
 
         object OnUserChat(IPlayer player, string message)
         {
             string styled = "";
             string colouredClanTag = allClans.getClanTagColoured(player.Id);
 
-            if (allMutedPlayers.isMuted(player.Id) == false)
+            if (allMutedPlayers.isMuted(player.Id))
             {
-                string msg = CleanMsg(player.Id, player.Name, message);
+                // If the player IS muted
 
-                if (Message_ScoldText == msg)
+                if (allMutedPlayers.mutedStatus(player.Id) == false)
                 {
-                    styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + Message_ScoldText + "</color>";
+                    // If the player has the mutefun status they will Mooo...
 
-                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
+                    styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + muteText(message) + "</color>";
+
+                    // Styles the message with coloured clan tag etc
 
                     ChatWithIgnore(player, styled);
 
+                    // Broadcasts the message to anyone who doesn't have them on their ignore list
+                }
+
+                TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
+
+                // Tell the moderators (privately) what the original, offending message said
+            }
+            else
+            {
+                // If the player is NOT muted
+
+                string msg = CleanMsg(player.Id, player.Name, message);
+
+                // If the player tries to say something bad.. replace the text
+
+                if (Message_ScoldText == msg)
+                {
+                    // If the message has been altered and replaced with the scold message e.g I have been muted for saying something bad...
+
+                    styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + Message_ScoldText + "</color>";
+
+                    // Styles the message with coloured clan tag etc
+
+                    ChatWithIgnore(player, styled);
+
+                    // Broadcasts the message to anyone who doesn't have them on their ignore list
+
                     TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, false);
+
+                    // Tell the moderators (privately) what the original, offending message said
                 }
                 else
                 {
-                    styled = "";
-
                     if (isAdmin(player.Id))
                         styled = colouredClanTag + "<color=" + Color_AdminName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + message + "</color>";
                     else
                         styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + message + "</color>";
 
-                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
-
                     ChatWithIgnore(player, styled);
+
+                    // Broadcasts the message to anyone who doesn't have them on their ignore list
                 }
 
                 Puts(player.Name + ": " + message);
+
+                // Enter the original message into the console
             }
-            else
-            {
-                if (allMutedPlayers.mutedStatus(player.Id) == false)
-                {
-                    styled = colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + ": </color><color=" + Color_GlobalText + ">" + muteText(message) + "</color>";
-
-                    //ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player.Id, styled });
-
-                    ChatWithIgnore(player, styled);
-                }
-
-                TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
-            }
-
+            
             metric_allMessages++;
+
+            // CORE FUNCTION, This function intercepts all messages sent by the user, from admins to regular users
 
             return true;
         }
@@ -409,25 +479,47 @@ namespace Oxide.Plugins
         [ChatCommand("ignore")]
         void cmd_IgnoreUser(BasePlayer player, string cmd, string[] args)
         {
-            if (argsCheck(args, 1))
+            if (argsCheck(args, 1)) 
             {
+                // Makes sure the arguments include at least one parameter e.g /ignore <username>
+
                 var foundPlayer = rust.FindPlayer(args[0]);
 
                 if (foundPlayer != null)
                 {
+                    // If the player to be muted is online
+
                     if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString) == false)
                     {
-                            if (foundPlayer.UserIDString != player.UserIDString)
-                            {
-                                allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
+                        // If the player isn't ignoring the player to be muted, yet..
 
-                                PrintToChat(player, "You have ignored player " + foundPlayer.displayName + ".");
-                            }
-                            else
-                                PrintToChat(player, "You can't ignore yourself...*sad music*");
+                        if (foundPlayer.UserIDString != player.UserIDString)
+                        {
+                            // Check is the user is trying to mute themselves... edge case
+
+                            allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
+
+                            // Track that the user is ignored and let the user know
+
+                            PrintToChat(player, "You have ignored player " + foundPlayer.displayName + ".");
+                        }
+                        else
+                        {
+                            // Tell the user they can't mute themselves
+
+                            PrintToChat(player, "You can't ignore yourself...*sad music*");
+                        }
                     }
                     else
+                    {
+                        // Tell the user they are already ignoring the person
+
                         PrintToChat(player, "You are already ignoring that person.");
+                    }
+                }
+                else
+                {
+                    PrintToChat(player, "Couldn't find a player by that name to ignore.");
                 }
             }
             else
@@ -437,25 +529,35 @@ namespace Oxide.Plugins
         [ChatCommand("unignore")]
         void cmd_UnignoreUser(BasePlayer player, string cmd, string[] args)
         {
-            var foundPlayer = rust.FindPlayer(args[0]);
-
             if (argsCheck(args, 1))
             {
+                // Makes sure the arguments include at least one parameter e.g /unignore <username>
+
+                var foundPlayer = rust.FindPlayer(args[0]);
+
                 if (foundPlayer != null)
                 {
+                    // Make sure the player exists
+
                     if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString))
                     {
-                            if (foundPlayer.UserIDString != player.UserIDString)
-                            {
-                                allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
-                                PrintToChat(player, "You have unignored player " + foundPlayer.displayName + ".");
-                            }
-                            else
-                                PrintToChat(player, "You can't unignore yourself...*sad music*");
-            
+                        // Check is the player is ignoring the username provided
+
+                        allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
+                        PrintToChat(player, "You have unignored player " + foundPlayer.displayName + ".");
                     }
                     else
+                    {
+                        // Let the player know they aren't ignoring the user
+                        
                         PrintToChat(player, "You don't have this player ignored.");
+                    }
+                }
+                else
+                {
+                    // Let the player know we couldn't find a user by that name to unignore
+
+                    PrintToChat(player, "Couldn't find a player by that name to unignore.");
                 }
             }
             else
@@ -464,17 +566,28 @@ namespace Oxide.Plugins
 
         void ChatWithIgnore(IPlayer playerTalking, string theirMessage)
         {
+            // Most messages pass through this method, this checks if a player, has another player ignored
+            // If the player does have them ignored, the message won't be broadcasted to them
+
             foreach (var playerIgnoring in BasePlayer.activePlayerList)
             {
-                if (allIgnoreData.isIgnoringPeople(playerIgnoring.UserIDString))
+                // For everyone on the server
+
+                if (allIgnoreData.isIgnoringPeople(playerIgnoring.UserIDString)) 
                 {
+                    // If the player is ignoring ANYONE online (some people don't bother with the ignore list) then..
+
                     if (allIgnoreData.isIgnoringPlayer(playerIgnoring.UserIDString, playerTalking.Id) == false)
                     {
+                        // If the player isn't being ignored by the person on the server, send them a message
+
                         rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
                     }
                 }
                 else
                 {
+                    // If the player on the server isn't ignoring anyone, send them the message
+
                     rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
                 }
             }
@@ -482,6 +595,8 @@ namespace Oxide.Plugins
 
         void SaveIgnoreData()
         {
+            // Save all the players ignore list to file
+
             Interface.Oxide.DataFileSystem.WriteObject("DoomChat_IgnoreData", allIgnoreData);
         }
 
@@ -536,8 +651,6 @@ namespace Oxide.Plugins
                     p.ignoreList.Add(ignoredPlayer);
 
                     allIgnoreData.Add(p);
-
-                    //Puts("Player Ignored");
                 }
                 else
                 {
@@ -547,8 +660,6 @@ namespace Oxide.Plugins
                         {
                             if(o.ignoreList.Contains(ignoredPlayer) == false)
                                 o.ignoreList.Add(ignoredPlayer);
-
-                            //Puts("Player Ignored"); 
                         }
                     }
                 }
@@ -565,7 +676,8 @@ namespace Oxide.Plugins
                     }
                 }
             }
-        }
+
+        }// IgnoreData
 
         class IgnoreOb
         {
@@ -625,7 +737,8 @@ namespace Oxide.Plugins
             {
                 return userID.GetHashCode();
             }
-        }
+
+        }// IgnoreOb
 
         #endregion
 
@@ -636,30 +749,41 @@ namespace Oxide.Plugins
         {
             if (anyArgsCheck(args))
             {
-                Dictionary<string, int> nameNumber = new Dictionary<string, int>();
+                // Makes at least one username is passed to this arguments /rolldice 8bit
+
                 System.Random r = new System.Random();
+                Dictionary<string, int> nameNumber = new Dictionary<string, int>();
+
                 string message = "<color=orange>Dice Rolled</color> - <color=yellow>Winner is closest to 100</color>\n";
-
                 string WinnerName = player.displayName;
-
                 int num = r.Next(100);
 
                 nameNumber.Add(player.displayName, num);
                 message += player.displayName + " --  [ " + num + " ]\n";
 
+                // Adds the person who calls the command to the Dictionary initially
+
                 foreach (string name in args)
                 {
+                    // For each name
+
                     if (IsOnlineAndValid(player, name))
                     {
                         var foundPlayer = rust.FindPlayer(name);
 
                         if (foundPlayer != null)
                         {
+                            // Make sure they are online
+
                             if (nameNumber.ContainsKey(foundPlayer.displayName) == false)
                             {
+                                // Makes sure the person isn't the person who called the command
+
                                 num = r.Next(100);
                                 nameNumber.Add(foundPlayer.displayName, num);
                                 message += "\n" + foundPlayer.displayName + "--  [ " + num + " ]";
+
+                                // Adds the user and dice roll to the message
                             }
                         }
                     }
@@ -667,19 +791,19 @@ namespace Oxide.Plugins
 
                 foreach (KeyValuePair<string, int> kv in nameNumber)
                 {
-                    Puts("Sending message too: " + kv.Key);
-
                     var foundPlayer = rust.FindPlayer(kv.Key);
 
                     if (foundPlayer != null)
                         rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
+
+                    // Sends the results to everyone who was added to the pool
                 }
 
                 metric_pokes++;
             }
             else
             {
-                PrintToChat(player, "To roll dice please follow the format.\nE.g /rolldice Andy 8bit hogan");
+                PrintToChat(player, "To roll dice please follow the format.\nE.g /rolldice Andy 8Bit hogan");
             }
         }
 
@@ -692,21 +816,34 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
+                // If the command was called by a moderator or admin
+
                 #region args 1
                 if (argsCheck(args, 1))
                 {
                     string choice = args[0].ToUpper();
+                    const int WORDSPERLINE = 7;
 
                     if (choice == "LIST")
                     {
                         string clist = "Filter List";
+                        int count = 0;
 
                         foreach (string w in list_FilteredWords)
                         {
                             clist = clist + " | " + w;
+
+                            if(count != 0 && count % WORDSPERLINE == 0)
+                            {
+                                clist += "\n";
+                            }
+
+                            ++count;
                         }
 
                         PrintToChat(player, clist);
+
+                        // List all the filtered words... Privately to the admin that entered in the /filter list command
                     }
                 }
                 #endregion
@@ -725,13 +862,15 @@ namespace Oxide.Plugins
                         {
                             list_FilteredWords.Add(tmp);
                             SaveConfigurationChanges();
+
+                            // Added the filter word to the DoomChat config file.
+
                             PrintToChat(player, msg);
                         }
                         else
                         {
                             PrintToChat(player, "Problem adding " + args[1].ToUpper() + " to the DoomChat config.");
                         }
-
                     }
 
                     if (choice == "REMOVE")
@@ -743,6 +882,9 @@ namespace Oxide.Plugins
                         {
                             list_FilteredWords.Remove(tmp);
                             SaveConfigurationChanges();
+
+                            // Removed the filter word from the DoomChat config file.
+
                             PrintToChat(player, msg);
                         }
                         else
@@ -772,6 +914,8 @@ namespace Oxide.Plugins
                 PrintToChat(player, Metrics_Text());
             else
                 NoPerms(player, args[0]);
+
+            // If the user is an admin/moderator, prints all of the metrics (privately) to chat.
         }
 
         #endregion
@@ -783,8 +927,12 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
+                // Makes sure an admin/moderator is calling this command
+
                 if (argsCheck(args, 1))
                 {
+                    // Make sure an argument is passed /automute on
+
                     string status = args[0].ToUpper();
                     bool valid = false;
 
@@ -810,6 +958,8 @@ namespace Oxide.Plugins
             }
             else
                 NoPerms(player, args[0]);
+
+            // Pretty straight forward
         }
 
         [ChatCommand("mute")]
@@ -817,6 +967,8 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
+                // Makes sure an admin/moderator is calling this command
+
                 if (args != null && args.Length > 0)
                 {
                     if (args[0].ToUpper() == "LIST")
@@ -831,18 +983,34 @@ namespace Oxide.Plugins
                             }
                         }
 
+                        // Prints the list of (online) muted players
+
                         PrintToChat(player, mlist);
                     }
                     else if (IsOnlineAndValid(player, args[0]))
                     {
+                        // E.g /mute Andy
+                        // Takes in args[0] as a name instead of a choice
+
                         var foundPlayer = rust.FindPlayer(args[0]);
+                        
+                        // If the player is online to mute
 
                         if (allMutedPlayers.isMuted(foundPlayer.UserIDString) == false)
                         {
+                            // If the player isn't muted yet
+
                             allMutedPlayers.addMutedPlayer_Manual(foundPlayer.UserIDString, foundPlayer.displayName, true);
+
+                            // Add the player to the mute list without inputing a reason (e.g the filter word stuff)
+
                             PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
+                            
                             Puts("[MUTED] Player " + foundPlayer.displayName + " .");
+                            
                             SaveMuteList();
+
+                            // Update the mute list data file
                         }
                         else
                             PrintToChat(player, args[0] + " already added to mute list.");
@@ -862,20 +1030,10 @@ namespace Oxide.Plugins
         {
             if (isAdmin(player.UserIDString))
             {
+                // Makes sure an admin/moderator is calling this command
+
                 if (args != null && args.Length > 0)
                 {
-                    string pName = "";
-
-                    for (int i = 0; i < args.Length; i++)
-                    {
-                        string tmp = "";
-
-                        if (i > 0)
-                            tmp = " ";
-
-                        pName += tmp + args[i];
-                    }
-
                     int count = allMutedPlayers.getMutedCount();
                     string name = "";
 
@@ -883,10 +1041,16 @@ namespace Oxide.Plugins
                     {
                         var foundPlayer = rust.FindPlayer(args[0]);
 
+                        // If the muted player is online currently
+
                         if (allMutedPlayers.isMuted(foundPlayer.UserIDString))
                         {
+                            // Check if they were muted
+
                             name = foundPlayer.displayName;
                             allMutedPlayers.removeMutedPlayer(foundPlayer.UserIDString);
+
+                            // Remove player from the mute list and save to file
 
                             SaveMuteList();
                         }
@@ -905,19 +1069,30 @@ namespace Oxide.Plugins
         [ChatCommand("mutefun")]
         void cmd_MuteAdd_Fun(BasePlayer player, string cmd, string[] args)
         {
+            // Mutes the player but anything they say in chat comes out in Moo's
+
             if (isAdmin(player.UserIDString))
             {
+                // Makes sure an admin/moderator is calling this command
+
                 if (args != null && args.Length > 0)
                 {
                     if (IsOnlineAndValid(player, args[0]))
                     {
                         var foundPlayer = rust.FindPlayer(args[0]);
 
+                        // If the muted player is online currently
+
                         if (allMutedPlayers.isMuted(foundPlayer.UserIDString) == false)
                         {
+                            // If the player isn't muted already
+
                             allMutedPlayers.addMutedPlayer_Manual(foundPlayer.UserIDString, foundPlayer.displayName, false);
 
                             PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
+
+                            // Add the name to the mute list and save
+
                             SaveMuteList();
                         }
                         else
@@ -981,6 +1156,7 @@ namespace Oxide.Plugins
             {
                 return userID.GetHashCode();
             }
+
         }
 
         class MutedData
@@ -1054,11 +1230,14 @@ namespace Oxide.Plugins
                 else
                     return false;
             }
+
         }
 
         void SaveMuteList()
         {
             Interface.Oxide.DataFileSystem.WriteObject("DoomChat_MutedPlayers", allMutedPlayers);
+
+            // Save the mutelist to file
         }
 
         #endregion
@@ -1075,6 +1254,8 @@ namespace Oxide.Plugins
             }
             else
                 PrintToChat(player, "You aren't signed up to tradechat");
+
+            // Unsubscribes the player from the tradechat if they havn't been unsubscribed already
         }
 
         [ChatCommand("t")]
@@ -1082,13 +1263,19 @@ namespace Oxide.Plugins
         {
             if (allMutedPlayers.isMuted(player.UserIDString) == false)
             {
+                // If the player isn't muted
+
                 if (anyArgsCheck(args))
                 {
+                    // Make sure they've entered text
+
                     if (allTradeChatIDs.doesExist(player.UserIDString))
                     {
                         allTradeChatIDs.removePlayer(player.UserIDString);
                         PrintToChat(player, "Subscribed to trade chat\nTo unsubscribe type /unsub");
                     }
+
+                    // Subscribe the user to the chat if they aren't already
 
                     string msg = "";
 
@@ -1102,6 +1289,8 @@ namespace Oxide.Plugins
                         msg += tmp + args[i];
                     }
 
+                    // Build message string from arguments
+
                     string fullMsg = " <color=" + Color_TradeText + ">[Trade] " + "</color><color=" + Color_PlayerName + ">" + player.displayName + ": </color>" + msg;
 
                     Puts("[Trade Chat] " + player.displayName + ": " + msg);
@@ -1110,6 +1299,8 @@ namespace Oxide.Plugins
                     {
                         if (allTradeChatIDs.doesExist(p.UserIDString) == false)
                         {
+                            // If person isn't in the unsub list
+
                             var foundPlayer = rust.FindPlayer(p.UserIDString);
 
                             if (foundPlayer != null)
@@ -1141,9 +1332,18 @@ namespace Oxide.Plugins
                         msg += tmp + args[i];
                     }
 
+                    // Build message string from arguments
+
                     TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                 }
             }
+        }
+
+        void SaveTradeChat()
+        {
+            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_TradeChat", allTradeChatIDs);
+
+            // Save the TradeChat ID's to file
         }
 
         class TradeChatData
@@ -1174,25 +1374,25 @@ namespace Oxide.Plugins
                 if (list_TradeChatIDs.Contains(userid))
                     list_TradeChatIDs.Remove(userid);
             }
-        }
+
+        }// TradeChatData
 
         #endregion
 
         #region Clan System
-
-        void SaveTradeChat()
-        {
-            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_TradeChat", allTradeChatIDs);
-        }
-
+        
         void SaveInviteData()
         {
             Interface.Oxide.DataFileSystem.WriteObject("DoomChat_Clans_Invites", allInvites);
+
+            // Save all the invites data to file
         }
 
         void SaveClanData()
         {
             Interface.Oxide.DataFileSystem.WriteObject("DoomChat_Clans_Data", allClans);
+
+            // Save all the clans data to file
         }
 
         bool CheckForInvite(string userID)
@@ -1201,15 +1401,21 @@ namespace Oxide.Plugins
                 return true;
             else
                 return false;
+
+            // Checks if the player has a current pending invite
         }
 
         private void TellClan(BasePlayer player, ClanObj clan, string fullMsg)
         {
             foreach (string member in clan.members)
             {
+                // Foreach member in the clan
+
                 if (IsOnlineAndValid(player, member))
                 {
                     var foundPlayer = rust.FindPlayer(member);
+
+                    // If the player is online currently, send them a private clan message
 
                     if (foundPlayer != null)
                         rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
@@ -1234,15 +1440,21 @@ namespace Oxide.Plugins
                     msg += tmp + args[i];
                 }
 
+                // Builds up the message from the arguments
+
                 string clanName = allClans.getClanTag(player.UserIDString);
                 string colouredTag = allClans.getClanByTag(clanName).tagColor;
                 string fullMsg = "<color=" + colouredTag + ">" + "[CLAN CHAT] </color>" + "<color=" + Color_PlayerName + ">" + player.displayName + ":</color> " + msg;
 
                 foreach (string member in allClans.getClanByTag(clanName).members)
                 {
+                    // Foreach member in the clan
+
                     if (IsOnlineAndValid(player, member))
                     {
                         var foundPlayer = rust.FindPlayer(member);
+
+                        // If they are clan member online, privately pass along the users message
 
                         if (foundPlayer != null)
                             rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
@@ -1847,12 +2059,16 @@ namespace Oxide.Plugins
             {
                 if (IsOnlineAndValid(player, args[0]))
                 {
+                    // Checks that the player is online and if they are, tell the player who's poking
+
                     string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
 
                     PrintToChat(player, online);
                 }
                 else
                 {
+                    // If the player is offline tell the player who's poking
+
                     string offline = "<color=red>" + args[0] + " is offline.</color>";
 
                     PrintToChat(player, offline);
@@ -1871,11 +2087,17 @@ namespace Oxide.Plugins
         {
             if (allMutedPlayers.isMuted(player.UserIDString) == false)
             {
+                // If the player isn't muted
+
                 if (args.Length > 1)
                 {
+                    // If the player has provided a username
+
                     if (IsOnlineAndValid(player, args[0]))
                     {
                         var foundPlayer = rust.FindPlayer(args[0]);
+
+                        // If the player they are trying to message online
 
                         string msg = "";
 
@@ -1889,20 +2111,32 @@ namespace Oxide.Plugins
                             msg += tmp + args[i];
                         }
 
+                        // Build their message from the rest of the arguments
+
                         if (player.UserIDString != foundPlayer.UserIDString)
                         {
+                            // Makes sure the player isn't trying to message themselves
+
                             string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
 
                             Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
-                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString); // Player to himself
+                            // Log the message in the console
+
+                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString); 
+
+                            // Displays the players own message to themselves
 
                             if (allIgnoreData.isIgnoringPlayer(foundPlayer.UserIDString, player.UserIDString) == false)
                             {
-                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString); // Player to user
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString); 
+                                
+                                // If the player isn't pm'ing somebody who has them actively ignored, send the message privately
                             }
 
                             UpdateLastReplied(player, foundPlayer);
+
+                            // Update the last replied list 
 
                             metric_privateMessages++;
                         }
@@ -1919,6 +2153,8 @@ namespace Oxide.Plugins
             {
                 PrintToChat(player, YOUAREMUTED);
 
+                // Tell the player they are muted
+
                 if (args.Length > 1)
                 {
                     string msg = "";
@@ -1933,6 +2169,8 @@ namespace Oxide.Plugins
                         msg += tmp + args[i];
                     }
 
+                    // Build the message from the rest of the arguments and tell the mods what they tried to say
+
                     TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                 }
             }
@@ -1944,11 +2182,17 @@ namespace Oxide.Plugins
         {
             if (anyArgsCheck(args))
             {
+                // Make sure the user is passing along a message and not anything blank
+
                 if (list_LastRepliedTo.ContainsKey(player.UserIDString))
                 {
+                    // Check if the person has been messaged otherwise they can't reply to nobody
+
                     if (IsOnlineAndValid(player, list_LastRepliedTo[player.UserIDString]))
                     {
                         var foundPlayer = rust.FindPlayer(list_LastRepliedTo[player.UserIDString]);
+
+                        // Make sure the user is online
 
                         string msg = " ";
 
@@ -1962,14 +2206,22 @@ namespace Oxide.Plugins
                             msg += tmp + args[i];
                         }
 
+                        // Build up the message
+
                         string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
 
                         Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
+                        // Log the PM to file
+
                         rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
                         rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
 
+                        // Send the message to the original player and the player they are replying to privately
+
                         UpdateLastReplied(player, foundPlayer);
+
+                        // Update that the player has replied to them
                     }
                     else
                         PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
@@ -1979,6 +2231,7 @@ namespace Oxide.Plugins
             }
 
         }// Private Message another player
+
         #endregion
 
         #region Helpers
@@ -1992,11 +2245,16 @@ namespace Oxide.Plugins
                 if (!Char.IsLetterOrDigit(c))
                     return false;
             }
+
+            // Checks whether a string is alphanumeric or not
+
             return true;
         }
 
         bool anyArgsCheck(string[] args)
         {
+            // Makes sure the argument array isn't null
+
             if (args == null)
                 return false;
 
@@ -2012,6 +2270,9 @@ namespace Oxide.Plugins
 
         bool argsCheck(string[] args, int count)
         {
+            // Checks if the argument array countains the right amount of arguments
+            // Also makes sure the argument array isn't null
+
             if (args == null)
                 return false;
 
@@ -2042,9 +2303,9 @@ namespace Oxide.Plugins
         public bool IsOnlineAndValid(BasePlayer player, string partialName)
         {
             var foundPlayer = rust.FindPlayer(partialName);
+
             if (foundPlayer == null)
             {
-                //PrintToChat(player, $"We couldn't find a player named {partialName}");
                 return false;
             }
             else
@@ -2057,12 +2318,12 @@ namespace Oxide.Plugins
                 }
                 else
                 {
-                    //PrintToChat(player, $"{foundPlayer.displayName} is not online, try again later!");
                     return false;
                 }
             }
 
-        }// Checks if the user is online and the username is valid
+            // Checks if the user is online and the username is valid
+        }
 
         public string IsOnlinePoke(BasePlayer player, string partialName)
         {
@@ -2070,7 +2331,8 @@ namespace Oxide.Plugins
 
             return foundPlayer.displayName;
 
-        }// Checks if the user is online and the username is valid
+            // Checks if the user is online and returns their proper username
+        }
 
         void SaveConfigurationChanges()
         {
@@ -2109,21 +2371,8 @@ namespace Oxide.Plugins
 
             SaveConfig();
 
-        }// Saves all changes made by commands to the configuration file.
-
-        private void FindAddMods()
-        {
-            var Online = BasePlayer.activePlayerList as List<BasePlayer>;
-
-            foreach (BasePlayer player in Online)
-            {
-                if (permission.UserHasGroup(player.UserIDString, "admin") || permission.UserHasGroup(player.UserIDString, "mod"))
-                {
-                    list_ModeratorIDs.Add(player.UserIDString);
-                }
-            }
-
-        }// Gets all current users and if they are a moderator or admin then add them to the moderatorid list.
+            // Saves all changes made by in game admin commands to the configuration file.
+        }
 
         private void TellMods(string name, string namecolored, string originalMessage, bool flag)
         {
@@ -2152,7 +2401,8 @@ namespace Oxide.Plugins
             else
                 Puts("[Telling Mods] " + Tag_Muted + " " + name + ": " + originalMessage);
 
-        }// Private message all moderators and admins
+            // Private message all moderators and admins
+        }
 
         void UpdateLastReplied(BasePlayer fromPlayer, BasePlayer toPlayer)
         {
@@ -2174,7 +2424,8 @@ namespace Oxide.Plugins
                 list_LastRepliedTo[toPlayer.UserIDString] = fromPlayer.UserIDString;
             }
 
-        }// Update last person replied too 
+            // Update last person replied too list
+        }
 
         private bool isAdmin(string playerID)
         {
@@ -2183,7 +2434,8 @@ namespace Oxide.Plugins
             else
                 return false;
 
-        }// Check the moderatorIDS list with the userid, if they exist return true
+            // Check if the player is an admin/moderator
+        }
 
         private string CleanMsg(string userid, string displayname, string msg)
         {
@@ -2192,13 +2444,27 @@ namespace Oxide.Plugins
 
             foreach (string word in list_FilteredWords)
             {
+                // For each word on the offending words list
+
                 if (upper.Contains(word))
                 {
+                    // If the message contains a bad word...
+
                     if (autoMute)
                     {
+                        // If automute is on
+
                         Puts("AUTOMUTED for saying: " + msg + " offending word: " + word);
+
+                        // Log in the console
+
                         allMutedPlayers.addMutedPlayer_Logged(userid, displayname, true, msg, word);
+
+                        // Add the users id,displayname,original message and offending filtered word to the data file
+
                         SaveMuteList();
+
+                        // Update the file immediately
                     }
 
                     return Message_ScoldText;
@@ -2212,6 +2478,8 @@ namespace Oxide.Plugins
         {
             string msg = UNKNOWN + arg;
             PrintToChat(player, msg);
+
+            // If the player has no permission to use that command, give them no permission text
         }
 
         bool ValidHex(string hexStr)
@@ -2230,6 +2498,8 @@ namespace Oxide.Plugins
                     return false;
                 }
             }
+
+            // Checks if the string is a valid hex color e.g #00ff11
 
             return true;
         }
@@ -2263,6 +2533,8 @@ namespace Oxide.Plugins
                 txt += tmp + " ";
             }
 
+            // Inputs a word e.g "Hello Buddy" will return something like "MoOoo mooo" or something similar
+
             return txt;
         }
 
@@ -2277,12 +2549,19 @@ namespace Oxide.Plugins
                 if (msg[i].Equals(sp))
                     count++;
 
+            // Checks how many words are in a sentence
+
             return count;
         }
 
         int randNum()
         {
+            int MIN = 2;
+            int MAX = 5;
+
             return rnd.Next(2, 5);
+
+            // Returns a random number between MIN & MAX
         }
 
         #endregion
