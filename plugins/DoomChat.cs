@@ -1243,8 +1243,6 @@ namespace Oxide.Plugins
                     {
                         int count = 0;
 
-                        message = "<color=orange>Clan Members Online for [" + clanTag + "]</color> - <color=yellow>[ " + allClans.getClanByTag(clanTag).members.Count + " ] Online</color>\n";
-
                         foreach (string s in allClans.getClanByTag(clanTag).members)
                         {
                             var foundPlayer = rust.FindPlayer(s);
@@ -1262,8 +1260,10 @@ namespace Oxide.Plugins
                                 }
                             }
                         }
-
-                        PrintToChat(player, message);
+                        
+                        string premessage = "<color=orange>Clan Members Online for [" + clanTag + "]</color> - <color=yellow>[ " + count + " ] Online</color>\n";
+                        
+                        PrintToChat(player, premessage + message);
                     }
 
                     action = true;
