@@ -432,6 +432,14 @@ namespace Oxide.Plugins
 
                 // If the player tries to say something bad.. replace the text
 
+                if(msg == Message_ScoldText && autoMute)
+                {
+                    var foundPlayer = rust.FindPlayer(player.Name);
+
+                    if(foundPlayer != null)
+                        rust.SendChatMessage(foundPlayer, "You have been muted, please contact an admin or moderator on steam/discord.", null, player.Id);
+                }
+
                 if (Message_ScoldText == msg)
                 {
                     // If the message has been altered and replaced with the scold message e.g I have been muted for saying something bad...
@@ -470,452 +478,6 @@ namespace Oxide.Plugins
             // CORE FUNCTION, This function intercepts all messages sent by the user, from admins to regular users
 
             return true;
-        }
-
-        #endregion
-
-        #region Ignore System
-
-        [ChatCommand("ignore")]
-        void cmd_IgnoreUser(BasePlayer player, string cmd, string[] args)
-        {
-            if (argsCheck(args, 1)) 
-            {
-                // Makes sure the arguments include at least one parameter e.g /ignore <username>
-
-                var foundPlayer = rust.FindPlayer(args[0]);
-
-                if (foundPlayer != null)
-                {
-                    // If the player to be muted is online
-
-                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString) == false)
-                    {
-                        // If the player isn't ignoring the player to be muted, yet..
-
-                        if (foundPlayer.UserIDString != player.UserIDString)
-                        {
-                            // Check is the user is trying to mute themselves... edge case
-
-                            allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
-
-                            // Track that the user is ignored and let the user know
-
-                            PrintToChat(player, "You have ignored player " + foundPlayer.displayName + ".");
-                        }
-                        else
-                        {
-                            // Tell the user they can't mute themselves
-
-                            PrintToChat(player, "You can't ignore yourself...*sad music*");
-                        }
-                    }
-                    else
-                    {
-                        // Tell the user they are already ignoring the person
-
-                        PrintToChat(player, "You are already ignoring that person.");
-                    }
-                }
-                else
-                {
-                    PrintToChat(player, "Couldn't find a player by that name to ignore.");
-                }
-            }
-            else
-                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
-        }
-
-        [ChatCommand("unignore")]
-        void cmd_UnignoreUser(BasePlayer player, string cmd, string[] args)
-        {
-            if (argsCheck(args, 1))
-            {
-                // Makes sure the arguments include at least one parameter e.g /unignore <username>
-
-                var foundPlayer = rust.FindPlayer(args[0]);
-
-                if (foundPlayer != null)
-                {
-                    // Make sure the player exists
-
-                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString))
-                    {
-                        // Check is the player is ignoring the username provided
-
-                        allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
-                        PrintToChat(player, "You have unignored player " + foundPlayer.displayName + ".");
-                    }
-                    else
-                    {
-                        // Let the player know they aren't ignoring the user
-                        
-                        PrintToChat(player, "You don't have this player ignored.");
-                    }
-                }
-                else
-                {
-                    // Let the player know we couldn't find a user by that name to unignore
-
-                    PrintToChat(player, "Couldn't find a player by that name to unignore.");
-                }
-            }
-            else
-                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
-        }
-
-        void ChatWithIgnore(IPlayer playerTalking, string theirMessage)
-        {
-            // Most messages pass through this method, this checks if a player, has another player ignored
-            // If the player does have them ignored, the message won't be broadcasted to them
-
-            foreach (var playerIgnoring in BasePlayer.activePlayerList)
-            {
-                // For everyone on the server
-
-                if (allIgnoreData.isIgnoringPeople(playerIgnoring.UserIDString)) 
-                {
-                    // If the player is ignoring ANYONE online (some people don't bother with the ignore list) then..
-
-                    if (allIgnoreData.isIgnoringPlayer(playerIgnoring.UserIDString, playerTalking.Id) == false)
-                    {
-                        // If the player isn't being ignored by the person on the server, send them a message
-
-                        rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
-                    }
-                }
-                else
-                {
-                    // If the player on the server isn't ignoring anyone, send them the message
-
-                    rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
-                }
-            }
-        }
-
-        void SaveIgnoreData()
-        {
-            // Save all the players ignore list to file
-
-            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_IgnoreData", allIgnoreData);
-        }
-
-        class IgnoreData
-        {
-            public List<IgnoreOb> allIgnoreData { get; set; }
-
-            public IgnoreData()
-            {
-                allIgnoreData = new List<IgnoreOb>();
-            }
-
-            public bool isIgnoringPeople(string userID)
-            {
-                if (allIgnoreData.Contains(new IgnoreOb(userID)))
-                    return true;
-                else
-                    return false;
-            }
-
-            public bool isIgnoringPlayer(string player, string ignoredPlayer)
-            {
-                foreach (IgnoreOb o in allIgnoreData)
-                {
-                    if (player == o.userID)
-                    {
-                        if (o.isIgnoringPlayer(ignoredPlayer))
-                            return true;
-                    }
-                }
-
-                return false;
-            }
-
-            public IgnoreOb getPlayer(string p)
-            {
-                foreach (IgnoreOb o in allIgnoreData)
-                {
-                    if (o.userID == p)
-                        return o;
-                }
-
-                return null;
-            }
-
-            public void ignorePlayer(string player, string ignoredPlayer)
-            {
-                IgnoreOb p = new IgnoreOb(player);
-
-                if (allIgnoreData.Contains(p) == false)
-                {
-                    p.ignoreList.Add(ignoredPlayer);
-
-                    allIgnoreData.Add(p);
-                }
-                else
-                {
-                    foreach (IgnoreOb o in allIgnoreData)
-                    {
-                        if (o.userID == player)
-                        {
-                            if(o.ignoreList.Contains(ignoredPlayer) == false)
-                                o.ignoreList.Add(ignoredPlayer);
-                        }
-                    }
-                }
-            }
-
-            public void unIgnorePlayer(string player, string ignoredPlayer)
-            {
-                foreach(IgnoreOb p in allIgnoreData)
-                {
-                    if(p.userID == player)
-                    {
-                        if (p.ignoreList.Contains(ignoredPlayer))
-                            p.ignoreList.Remove(ignoredPlayer);
-                    }
-                }
-            }
-
-        }// IgnoreData
-
-        class IgnoreOb
-        {
-            public string userID { get; set; }
-            public HashSet<string> ignoreList { get; set; }
-
-            public IgnoreOb(string userID)
-            {
-                ignoreList = new HashSet<string>();
-                this.userID = userID;
-            }
-
-            public void ignorePlayer(string id)
-            {
-                if (ignoreList.Contains(id))
-                    ignoreList.Remove(id);
-            }
-
-            public void unignorePlayer(string id)
-            {
-                if (ignoreList.Contains(id) == false)
-                    ignoreList.Add(id);
-            }
-
-            public bool isIgnoringPlayer(string id)
-            {
-                if (ignoreList == null)
-                    return false;
-
-                if (ignoreList.Contains(id))
-                    return true;
-
-                return false;
-            }
-
-            public override bool Equals(object obj)
-            {
-                var item = obj as IgnoreOb;
-
-                if (this.userID != null && item != null)
-                {
-                    if (this.userID != "")
-                    {
-                        if (this.userID == item.userID)
-                            return true;
-                        else
-                            return false;
-                    }
-                    else
-                        return false;
-                }
-                else
-                    return false;
-            }
-
-            public override int GetHashCode()
-            {
-                return userID.GetHashCode();
-            }
-
-        }// IgnoreOb
-
-        #endregion
-
-        #region RollDice
-
-        [ChatCommand("rolldice")]
-        void cmd_DiceRoll(BasePlayer player, string cmd, string[] args)
-        {
-            if (anyArgsCheck(args))
-            {
-                // Makes at least one username is passed to this arguments /rolldice 8bit
-
-                System.Random r = new System.Random();
-                Dictionary<string, int> nameNumber = new Dictionary<string, int>();
-
-                string message = "<color=orange>Dice Rolled</color> - <color=yellow>Winner is closest to 100</color>\n";
-                string WinnerName = player.displayName;
-                int num = r.Next(100);
-
-                nameNumber.Add(player.displayName, num);
-                message += player.displayName + " --  [ " + num + " ]\n";
-
-                // Adds the person who calls the command to the Dictionary initially
-
-                foreach (string name in args)
-                {
-                    // For each name
-
-                    if (IsOnlineAndValid(player, name))
-                    {
-                        var foundPlayer = rust.FindPlayer(name);
-
-                        if (foundPlayer != null)
-                        {
-                            // Make sure they are online
-
-                            if (nameNumber.ContainsKey(foundPlayer.displayName) == false)
-                            {
-                                // Makes sure the person isn't the person who called the command
-
-                                num = r.Next(100);
-                                nameNumber.Add(foundPlayer.displayName, num);
-                                message += "\n" + foundPlayer.displayName + "--  [ " + num + " ]";
-
-                                // Adds the user and dice roll to the message
-                            }
-                        }
-                    }
-                }
-
-                foreach (KeyValuePair<string, int> kv in nameNumber)
-                {
-                    var foundPlayer = rust.FindPlayer(kv.Key);
-
-                    if (foundPlayer != null)
-                        rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
-
-                    // Sends the results to everyone who was added to the pool
-                }
-
-                metric_pokes++;
-            }
-            else
-            {
-                PrintToChat(player, "To roll dice please follow the format.\nE.g /rolldice Andy 8Bit hogan");
-            }
-        }
-
-        #endregion
-
-        #region Word Filter System
-
-        [ChatCommand("filter")]
-        void cmd_WordFilters(BasePlayer player, string cmd, string[] args)
-        {
-            if (isAdmin(player.UserIDString))
-            {
-                // If the command was called by a moderator or admin
-
-                #region args 1
-                if (argsCheck(args, 1))
-                {
-                    string choice = args[0].ToUpper();
-                    const int WORDSPERLINE = 7;
-
-                    if (choice == "LIST")
-                    {
-                        string clist = "Filter List";
-                        int count = 0;
-
-                        foreach (string w in list_FilteredWords)
-                        {
-                            clist = clist + " | " + w;
-
-                            if(count != 0 && count % WORDSPERLINE == 0)
-                            {
-                                clist += "\n";
-                            }
-
-                            ++count;
-                        }
-
-                        PrintToChat(player, clist);
-
-                        // List all the filtered words... Privately to the admin that entered in the /filter list command
-                    }
-                }
-                #endregion
-
-                #region args 2
-                else if (argsCheck(args, 2))
-                {
-                    string choice = args[0].ToUpper();
-
-                    if (choice == "ADD")
-                    {
-                        string tmp = args[1].ToUpper();
-                        string msg = tmp + " added to the DoomChat config.";
-
-                        if (!list_FilteredWords.Contains(tmp))
-                        {
-                            list_FilteredWords.Add(tmp);
-                            SaveConfigurationChanges();
-
-                            // Added the filter word to the DoomChat config file.
-
-                            PrintToChat(player, msg);
-                        }
-                        else
-                        {
-                            PrintToChat(player, "Problem adding " + args[1].ToUpper() + " to the DoomChat config.");
-                        }
-                    }
-
-                    if (choice == "REMOVE")
-                    {
-                        string tmp = args[1].ToUpper();
-                        string msg = tmp + " removed from the DoomChat config.";
-
-                        if (list_FilteredWords.Contains(tmp))
-                        {
-                            list_FilteredWords.Remove(tmp);
-                            SaveConfigurationChanges();
-
-                            // Removed the filter word from the DoomChat config file.
-
-                            PrintToChat(player, msg);
-                        }
-                        else
-                        {
-                            PrintToChat(player, "Problem removing " + args[1].ToUpper() + " to the DoomChat config.");
-                        }
-                    }
-                }
-                #endregion
-                else
-                {
-                    PrintToChat(player, "Please use the correct filter format.\n/filter <list><add><remove>");
-                }
-            }
-            else
-                NoPerms(player, args[0]);
-        }
-
-        #endregion System System
-
-        #region Metrics
-
-        [ChatCommand("metrics")]
-        void cmd_Metrics(BasePlayer player, string cmd, string[] args)
-        {
-            if (isAdmin(player.UserIDString))
-                PrintToChat(player, Metrics_Text());
-            else
-                NoPerms(player, args[0]);
-
-            // If the user is an admin/moderator, prints all of the metrics (privately) to chat.
         }
 
         #endregion
@@ -993,7 +555,7 @@ namespace Oxide.Plugins
                         // Takes in args[0] as a name instead of a choice
 
                         var foundPlayer = rust.FindPlayer(args[0]);
-                        
+
                         // If the player is online to mute
 
                         if (allMutedPlayers.isMuted(foundPlayer.UserIDString) == false)
@@ -1005,9 +567,9 @@ namespace Oxide.Plugins
                             // Add the player to the mute list without inputing a reason (e.g the filter word stuff)
 
                             PrintToChat(player, "Added " + foundPlayer.displayName + " to mute list.");
-                            
+
                             Puts("[MUTED] Player " + foundPlayer.displayName + " .");
-                            
+
                             SaveMuteList();
 
                             // Update the mute list data file
@@ -1242,6 +804,102 @@ namespace Oxide.Plugins
 
         #endregion
 
+        #region Filter System
+
+        [ChatCommand("filter")]
+        void cmd_WordFilters(BasePlayer player, string cmd, string[] args)
+        {
+            if (isAdmin(player.UserIDString))
+            {
+                // If the command was called by a moderator or admin
+
+                #region args 1
+                if (argsCheck(args, 1))
+                {
+                    string choice = args[0].ToUpper();
+                    const int WORDSPERLINE = 7;
+
+                    if (choice == "LIST")
+                    {
+                        string clist = "Filter List";
+                        int count = 0;
+
+                        foreach (string w in list_FilteredWords)
+                        {
+                            clist = clist + " | " + w;
+
+                            if (count != 0 && count % WORDSPERLINE == 0)
+                            {
+                                clist += "\n";
+                            }
+
+                            ++count;
+                        }
+
+                        PrintToChat(player, clist);
+
+                        // List all the filtered words... Privately to the admin that entered in the /filter list command
+                    }
+                }
+                #endregion
+
+                #region args 2
+                else if (argsCheck(args, 2))
+                {
+                    string choice = args[0].ToUpper();
+
+                    if (choice == "ADD")
+                    {
+                        string tmp = args[1].ToUpper();
+                        string msg = tmp + " added to the DoomChat config.";
+
+                        if (!list_FilteredWords.Contains(tmp))
+                        {
+                            list_FilteredWords.Add(tmp);
+                            SaveConfigurationChanges();
+
+                            // Added the filter word to the DoomChat config file.
+
+                            PrintToChat(player, msg);
+                        }
+                        else
+                        {
+                            PrintToChat(player, "Problem adding " + args[1].ToUpper() + " to the DoomChat config.");
+                        }
+                    }
+
+                    if (choice == "REMOVE")
+                    {
+                        string tmp = args[1].ToUpper();
+                        string msg = tmp + " removed from the DoomChat config.";
+
+                        if (list_FilteredWords.Contains(tmp))
+                        {
+                            list_FilteredWords.Remove(tmp);
+                            SaveConfigurationChanges();
+
+                            // Removed the filter word from the DoomChat config file.
+
+                            PrintToChat(player, msg);
+                        }
+                        else
+                        {
+                            PrintToChat(player, "Problem removing " + args[1].ToUpper() + " to the DoomChat config.");
+                        }
+                    }
+                }
+                #endregion
+                else
+                {
+                    PrintToChat(player, "Please use the correct filter format.\n/filter <list><add><remove>");
+                }
+            }
+            else
+                NoPerms(player, args[0]);
+        }
+
+        #endregion System System
+
         #region Trade System
 
         [ChatCommand("unsub")]
@@ -1380,7 +1038,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region Clan System
-        
+
         void SaveInviteData()
         {
             Interface.Oxide.DataFileSystem.WriteObject("DoomChat_Clans_Invites", allInvites);
@@ -2051,36 +1709,6 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        #region Player Poke
-        [ChatCommand("poke")]
-        void cmd_CheckOnline(BasePlayer player, string cmd, string[] args)
-        {
-            if (argsCheck(args, 1))
-            {
-                if (IsOnlineAndValid(player, args[0]))
-                {
-                    // Checks that the player is online and if they are, tell the player who's poking
-
-                    string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
-
-                    PrintToChat(player, online);
-                }
-                else
-                {
-                    // If the player is offline tell the player who's poking
-
-                    string offline = "<color=red>" + args[0] + " is offline.</color>";
-
-                    PrintToChat(player, offline);
-                }
-            }
-            else
-                PrintToChat(player, "Please enter proper arguments. Example /online Andy");
-
-            metric_pokes++;
-        }
-        #endregion
-
         #region PM System
         [ChatCommand("pm")]
         void cmd_PrivateMessage(BasePlayer player, string cmd, string[] args)
@@ -2234,6 +1862,386 @@ namespace Oxide.Plugins
 
         #endregion
 
+        #region Ignore System
+
+        [ChatCommand("ignore")]
+        void cmd_IgnoreUser(BasePlayer player, string cmd, string[] args)
+        {
+            if (argsCheck(args, 1))
+            {
+                // Makes sure the arguments include at least one parameter e.g /ignore <username>
+
+                var foundPlayer = rust.FindPlayer(args[0]);
+
+                if (foundPlayer != null)
+                {
+                    // If the player to be muted is online
+
+                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString) == false)
+                    {
+                        // If the player isn't ignoring the player to be muted, yet..
+
+                        if (foundPlayer.UserIDString != player.UserIDString)
+                        {
+                            // Check is the user is trying to mute themselves... edge case
+
+                            allIgnoreData.ignorePlayer(player.UserIDString, foundPlayer.UserIDString);
+
+                            // Track that the user is ignored and let the user know
+
+                            PrintToChat(player, "You have ignored player " + foundPlayer.displayName + ".");
+                        }
+                        else
+                        {
+                            // Tell the user they can't mute themselves
+
+                            PrintToChat(player, "You can't ignore yourself...*sad music*");
+                        }
+                    }
+                    else
+                    {
+                        // Tell the user they are already ignoring the person
+
+                        PrintToChat(player, "You are already ignoring that person.");
+                    }
+                }
+                else
+                {
+                    PrintToChat(player, "Couldn't find a player by that name to ignore.");
+                }
+            }
+            else
+                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
+        }
+
+        [ChatCommand("unignore")]
+        void cmd_UnignoreUser(BasePlayer player, string cmd, string[] args)
+        {
+            if (argsCheck(args, 1))
+            {
+                // Makes sure the arguments include at least one parameter e.g /unignore <username>
+
+                var foundPlayer = rust.FindPlayer(args[0]);
+
+                if (foundPlayer != null)
+                {
+                    // Make sure the player exists
+
+                    if (allIgnoreData.isIgnoringPlayer(player.UserIDString, foundPlayer.UserIDString))
+                    {
+                        // Check is the player is ignoring the username provided
+
+                        allIgnoreData.unIgnorePlayer(player.UserIDString, foundPlayer.UserIDString);
+                        PrintToChat(player, "You have unignored player " + foundPlayer.displayName + ".");
+                    }
+                    else
+                    {
+                        // Let the player know they aren't ignoring the user
+
+                        PrintToChat(player, "You don't have this player ignored.");
+                    }
+                }
+                else
+                {
+                    // Let the player know we couldn't find a user by that name to unignore
+
+                    PrintToChat(player, "Couldn't find a player by that name to unignore.");
+                }
+            }
+            else
+                PrintToChat(player, "Incorrect arguments e.g /ignore playername");
+        }
+
+        void ChatWithIgnore(IPlayer playerTalking, string theirMessage)
+        {
+            // Most messages pass through this method, this checks if a player, has another player ignored
+            // If the player does have them ignored, the message won't be broadcasted to them
+
+            foreach (var playerIgnoring in BasePlayer.activePlayerList)
+            {
+                // For everyone on the server
+
+                if (allIgnoreData.isIgnoringPeople(playerIgnoring.UserIDString))
+                {
+                    // If the player is ignoring ANYONE online (some people don't bother with the ignore list) then..
+
+                    if (allIgnoreData.isIgnoringPlayer(playerIgnoring.UserIDString, playerTalking.Id) == false)
+                    {
+                        // If the player isn't being ignored by the person on the server, send them a message
+
+                        rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
+                    }
+                }
+                else
+                {
+                    // If the player on the server isn't ignoring anyone, send them the message
+
+                    rust.SendChatMessage(playerIgnoring, theirMessage, null, playerTalking.Id);
+                }
+            }
+        }
+
+        void SaveIgnoreData()
+        {
+            // Save all the players ignore list to file
+
+            Interface.Oxide.DataFileSystem.WriteObject("DoomChat_IgnoreData", allIgnoreData);
+        }
+
+        class IgnoreData
+        {
+            public List<IgnoreOb> allIgnoreData { get; set; }
+
+            public IgnoreData()
+            {
+                allIgnoreData = new List<IgnoreOb>();
+            }
+
+            public bool isIgnoringPeople(string userID)
+            {
+                if (allIgnoreData.Contains(new IgnoreOb(userID)))
+                    return true;
+                else
+                    return false;
+            }
+
+            public bool isIgnoringPlayer(string player, string ignoredPlayer)
+            {
+                foreach (IgnoreOb o in allIgnoreData)
+                {
+                    if (player == o.userID)
+                    {
+                        if (o.isIgnoringPlayer(ignoredPlayer))
+                            return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public IgnoreOb getPlayer(string p)
+            {
+                foreach (IgnoreOb o in allIgnoreData)
+                {
+                    if (o.userID == p)
+                        return o;
+                }
+
+                return null;
+            }
+
+            public void ignorePlayer(string player, string ignoredPlayer)
+            {
+                IgnoreOb p = new IgnoreOb(player);
+
+                if (allIgnoreData.Contains(p) == false)
+                {
+                    p.ignoreList.Add(ignoredPlayer);
+
+                    allIgnoreData.Add(p);
+                }
+                else
+                {
+                    foreach (IgnoreOb o in allIgnoreData)
+                    {
+                        if (o.userID == player)
+                        {
+                            if (o.ignoreList.Contains(ignoredPlayer) == false)
+                                o.ignoreList.Add(ignoredPlayer);
+                        }
+                    }
+                }
+            }
+
+            public void unIgnorePlayer(string player, string ignoredPlayer)
+            {
+                foreach (IgnoreOb p in allIgnoreData)
+                {
+                    if (p.userID == player)
+                    {
+                        if (p.ignoreList.Contains(ignoredPlayer))
+                            p.ignoreList.Remove(ignoredPlayer);
+                    }
+                }
+            }
+
+        }// IgnoreData
+
+        class IgnoreOb
+        {
+            public string userID { get; set; }
+            public HashSet<string> ignoreList { get; set; }
+
+            public IgnoreOb(string userID)
+            {
+                ignoreList = new HashSet<string>();
+                this.userID = userID;
+            }
+
+            public void ignorePlayer(string id)
+            {
+                if (ignoreList.Contains(id))
+                    ignoreList.Remove(id);
+            }
+
+            public void unignorePlayer(string id)
+            {
+                if (ignoreList.Contains(id) == false)
+                    ignoreList.Add(id);
+            }
+
+            public bool isIgnoringPlayer(string id)
+            {
+                if (ignoreList == null)
+                    return false;
+
+                if (ignoreList.Contains(id))
+                    return true;
+
+                return false;
+            }
+
+            public override bool Equals(object obj)
+            {
+                var item = obj as IgnoreOb;
+
+                if (this.userID != null && item != null)
+                {
+                    if (this.userID != "")
+                    {
+                        if (this.userID == item.userID)
+                            return true;
+                        else
+                            return false;
+                    }
+                    else
+                        return false;
+                }
+                else
+                    return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return userID.GetHashCode();
+            }
+
+        }// IgnoreOb
+
+        #endregion
+
+        #region Poke
+        [ChatCommand("poke")]
+        void cmd_CheckOnline(BasePlayer player, string cmd, string[] args)
+        {
+            if (argsCheck(args, 1))
+            {
+                if (IsOnlineAndValid(player, args[0]))
+                {
+                    // Checks that the player is online and if they are, tell the player who's poking
+
+                    string online = "<color=green>" + IsOnlinePoke(player, args[0]) + " is online.</color>";
+
+                    PrintToChat(player, online);
+                }
+                else
+                {
+                    // If the player is offline tell the player who's poking
+
+                    string offline = "<color=red>" + args[0] + " is offline.</color>";
+
+                    PrintToChat(player, offline);
+                }
+            }
+            else
+                PrintToChat(player, "Please enter proper arguments. Example /online Andy");
+
+            metric_pokes++;
+        }
+        #endregion
+
+        #region Metrics
+
+        [ChatCommand("metrics")]
+        void cmd_Metrics(BasePlayer player, string cmd, string[] args)
+        {
+            if (isAdmin(player.UserIDString))
+                PrintToChat(player, Metrics_Text());
+            else
+                NoPerms(player, args[0]);
+
+            // If the user is an admin/moderator, prints all of the metrics (privately) to chat.
+        }
+
+        #endregion
+
+        #region Roll Dice
+
+        [ChatCommand("rolldice")]
+        void cmd_DiceRoll(BasePlayer player, string cmd, string[] args)
+        {
+            if (anyArgsCheck(args))
+            {
+                // Makes at least one username is passed to this arguments /rolldice 8bit
+
+                System.Random r = new System.Random();
+                Dictionary<string, int> nameNumber = new Dictionary<string, int>();
+
+                string message = "<color=orange>Dice Rolled</color> - <color=yellow>Winner is closest to 100</color>\n";
+                string WinnerName = player.displayName;
+                int num = r.Next(100);
+
+                nameNumber.Add(player.displayName, num);
+                message += player.displayName + " --  [ " + num + " ]\n";
+
+                // Adds the person who calls the command to the Dictionary initially
+
+                foreach (string name in args)
+                {
+                    // For each name
+
+                    if (IsOnlineAndValid(player, name))
+                    {
+                        var foundPlayer = rust.FindPlayer(name);
+
+                        if (foundPlayer != null)
+                        {
+                            // Make sure they are online
+
+                            if (nameNumber.ContainsKey(foundPlayer.displayName) == false)
+                            {
+                                // Makes sure the person isn't the person who called the command
+
+                                num = r.Next(100);
+                                nameNumber.Add(foundPlayer.displayName, num);
+                                message += "\n" + foundPlayer.displayName + "--  [ " + num + " ]";
+
+                                // Adds the user and dice roll to the message
+                            }
+                        }
+                    }
+                }
+
+                foreach (KeyValuePair<string, int> kv in nameNumber)
+                {
+                    var foundPlayer = rust.FindPlayer(kv.Key);
+
+                    if (foundPlayer != null)
+                        rust.SendChatMessage(foundPlayer, message, null, player.UserIDString);
+
+                    // Sends the results to everyone who was added to the pool
+                }
+
+                metric_pokes++;
+            }
+            else
+            {
+                PrintToChat(player, "To roll dice please follow the format.\nE.g /rolldice Andy 8Bit hogan");
+            }
+        }
+
+        #endregion
+        
         #region Helpers
 
         bool IsAlphaNumeric(string str)
