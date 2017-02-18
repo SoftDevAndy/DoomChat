@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "2.0.0")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.0.2")]
     [Description("Custom Chat Plugin for the DoomTown.io Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -200,7 +200,7 @@ namespace Oxide.Plugins
                 PrintToChat(player, CommandsText_Mute());
             }
             else
-                NoPerms(player, args[0]);
+                NoPerms(player, cmd);
 
             // Shows all the mute commands to the ADMINS ONLY
         }
@@ -213,7 +213,7 @@ namespace Oxide.Plugins
                 PrintToChat(player, CommandsText_Filters());
             }
             else
-                NoPerms(player, args[0]);
+                NoPerms(player, cmd);
 
             // Shows all the filter commands to the ADMINS ONLY
         }
@@ -518,7 +518,7 @@ namespace Oxide.Plugins
                 }
             }
             else
-                NoPerms(player, args[0]);
+                NoPerms(player, cmd);
 
             // Pretty straight forward
         }
@@ -894,7 +894,7 @@ namespace Oxide.Plugins
                 }
             }
             else
-                NoPerms(player, args[0]);
+                NoPerms(player, cmd);
         }
 
         #endregion System System
@@ -1180,8 +1180,10 @@ namespace Oxide.Plugins
                 // Build up the clan list string and print it to chat
             }
             else
-                NoPerms(player, args[0]);
-        }
+            { 
+                NoPerms(player, cmd);
+            }
+         }
 
         [ChatCommand("clan")]
         void cmd_ClanDecision(BasePlayer player, string cmd, string[] args)
@@ -1474,7 +1476,7 @@ namespace Oxide.Plugins
 
                     }
                     else
-                        NoPerms(player, args[0]);
+                        NoPerms(player, cmd);
                 }
                 #endregion
 
@@ -1889,7 +1891,7 @@ namespace Oxide.Plugins
                         {
                             // Makes sure the player isn't trying to message themselves
 
-                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
+                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "): </color>" + msg;
 
                             Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
@@ -1984,9 +1986,9 @@ namespace Oxide.Plugins
 
                             // Build up the message
 
-                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
+                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "): </color>" + msg;
 
-                            Puts("[PM-R] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+                            Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
                             // Log the PM to file
 
@@ -2347,7 +2349,7 @@ namespace Oxide.Plugins
             if (isAdmin(player.UserIDString))
                 PrintToChat(player, Metrics_Text());
             else
-                NoPerms(player, args[0]);
+                NoPerms(player, cmd);
 
             // If the user is an admin/moderator, prints all of the metrics (privately) to chat.
         }
