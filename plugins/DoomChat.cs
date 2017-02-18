@@ -1942,7 +1942,9 @@ namespace Oxide.Plugins
 
                     // Build the message from the rest of the arguments and tell the mods what they tried to say
 
-                    TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
+                    string colouredClanTag = allClans.getClanTagColoured(player.Id);
+
+                    TellMods(player.displayName, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                 }
             }
 
