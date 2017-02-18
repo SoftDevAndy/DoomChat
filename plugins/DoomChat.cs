@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "1.0.0")]
+    [Info("DoomChat", "SoftDevAndy & wski", "1.0.1")]
     [Description("Custom Chat Plugin for the DoomTown.io Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -1955,19 +1955,66 @@ namespace Oxide.Plugins
             {
                 // Make sure the user is passing along a message and not anything blank
 
-                if (list_LastRepliedTo.ContainsKey(player.UserIDString))
+                if (allMutedPlayers.isMuted(player.UserIDString) == false)
                 {
-                    // Check if the person has been messaged otherwise they can't reply to nobody
 
-                    if (IsOnlineAndValid(player, list_LastRepliedTo[player.UserIDString]))
+                    if (list_LastRepliedTo.ContainsKey(player.UserIDString))
                     {
-                        var foundPlayer = rust.FindPlayer(list_LastRepliedTo[player.UserIDString]);
+                        // Check if the person has been messaged otherwise they can't reply to nobody
 
-                        // Make sure the user is online
+                        if (IsOnlineAndValid(player, list_LastRepliedTo[player.UserIDString]))
+                        {
+                            var foundPlayer = rust.FindPlayer(list_LastRepliedTo[player.UserIDString]);
 
-                        string msg = " ";
+                            // Make sure the user is online
 
-                        for (int i = 0; i < args.Length; i++)
+                            string msg = " ";
+
+                            for (int i = 0; i < args.Length; i++)
+                            {
+                                string tmp = "";
+
+                                if (i > 0)
+                                    tmp = " ";
+
+                                msg += tmp + args[i];
+                            }
+
+                            // Build up the message
+
+                            string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
+
+                            Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+
+                            // Log the PM to file
+
+                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
+
+                            // Send the message to the original player and the player they are replying to privately
+
+                            UpdateLastReplied(player, foundPlayer);
+
+                            // Update that the player has replied to them
+                        }
+                        else
+                            PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
+                    }
+                    else
+                        PrintToChat(player, "Message was too short.");
+
+                }// If not Muted
+                else
+                {
+                    PrintToChat(player, YOUAREMUTED);
+
+                    // Tell the player they are muted
+
+                    if (args.Length > 1)
+                    {
+                        string msg = "";
+
+                        for (int i = 1; i < args.Length; i++)
                         {
                             string tmp = "";
 
@@ -1977,28 +2024,11 @@ namespace Oxide.Plugins
                             msg += tmp + args[i];
                         }
 
-                        // Build up the message
+                        // Build the message from the rest of the arguments and tell the mods what they tried to say
 
-                        string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
-
-                        Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
-
-                        // Log the PM to file
-
-                        rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
-                        rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
-
-                        // Send the message to the original player and the player they are replying to privately
-
-                        UpdateLastReplied(player, foundPlayer);
-
-                        // Update that the player has replied to them
+                        TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
                     }
-                    else
-                        PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
                 }
-                else
-                    PrintToChat(player, "Message was too short.");
             }
 
         }// Private Message another player
@@ -2335,7 +2365,7 @@ namespace Oxide.Plugins
                 int num = r.Next(100);
 
                 nameNumber.Add(player.displayName, num);
-                message += player.displayName + " --  [ " + num + " ]\n";
+                message += player.displayName + " --  [ " + num + " ]";
 
                 // Adds the person who calls the command to the Dictionary initially
 
