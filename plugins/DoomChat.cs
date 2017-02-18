@@ -2405,7 +2405,7 @@ namespace Oxide.Plugins
                     // Sends the results to everyone who was added to the pool
                 }
 
-                metric_pokes++;
+                metric_diceRolls++;
             }
             else
             {
