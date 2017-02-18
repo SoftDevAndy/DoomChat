@@ -424,7 +424,6 @@ namespace Oxide.Plugins
 
                 if (foundPlayer != null)
                 {
-                    Puts(" HERE !");
                     PrintToChat(foundPlayer, YOUAREMUTED);
                 }
 
@@ -1987,7 +1986,7 @@ namespace Oxide.Plugins
 
                             string fullMsg = "<color=" + Color_PrivateMessageTag + ">" + Tag_PrivateMessage + " </color><color=" + Color_PlayerName + ">(" + player.displayName + " --> " + foundPlayer.displayName + "):</color>" + msg;
 
-                            Puts("[PM] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
+                            Puts("[PM-R] " + player.displayName + " to " + foundPlayer.displayName + " : " + msg);
 
                             // Log the PM to file
 
