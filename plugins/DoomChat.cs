@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "1.0.1")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.0.0")]
     [Description("Custom Chat Plugin for the DoomTown.io Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -249,16 +249,16 @@ namespace Oxide.Plugins
             {
                 if (permission.UserHasGroup(player.UserIDString, "admin") || permission.UserHasGroup(player.UserIDString, "moderator"))
                 {
-                    if(list_ModeratorIDs.Contains(player.UserIDString) == false)
+                    if (list_ModeratorIDs.Contains(player.UserIDString) == false)
                         list_ModeratorIDs.Add(player.UserIDString);
                 }
 
                 // Adds moderator/admin to moderator list
-                
+
                 if (allClans.isInClan(player.UserIDString))
                 {
                     list_UserToClanTags.Add(player.UserIDString, allClans.getClanTag(player.UserIDString));
-                }    
+                }
 
                 // Checks if player has a clan tag and tracks it
             }
@@ -274,7 +274,7 @@ namespace Oxide.Plugins
             SaveIgnoreData();
 
             // Save Data to files
-            
+
             SaveConfigurationChanges();
 
             // Update Configuration changes
@@ -420,6 +420,14 @@ namespace Oxide.Plugins
                     // Broadcasts the message to anyone who doesn't have them on their ignore list
                 }
 
+                var foundPlayer = rust.FindPlayer(player.Name);
+
+                if (foundPlayer != null)
+                {
+                    Puts(" HERE !");
+                    PrintToChat(foundPlayer, YOUAREMUTED);
+                }
+
                 TellMods(player.Name, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.Name + "</color>", message, true);
 
                 // Tell the moderators (privately) what the original, offending message said
@@ -431,15 +439,7 @@ namespace Oxide.Plugins
                 string msg = CleanMsg(player.Id, player.Name, message);
 
                 // If the player tries to say something bad.. replace the text
-
-                if(msg == Message_ScoldText && autoMute)
-                {
-                    var foundPlayer = rust.FindPlayer(player.Name);
-
-                    if(foundPlayer != null)
-                        rust.SendChatMessage(foundPlayer, "You have been muted, please contact an admin or moderator on steam/discord.", null, player.Id);
-                }
-
+                
                 if (Message_ScoldText == msg)
                 {
                     // If the message has been altered and replaced with the scold message e.g I have been muted for saying something bad...
@@ -472,7 +472,7 @@ namespace Oxide.Plugins
 
                 // Enter the original message into the console
             }
-            
+
             metric_allMessages++;
 
             // CORE FUNCTION, This function intercepts all messages sent by the user, from admins to regular users
@@ -992,7 +992,9 @@ namespace Oxide.Plugins
 
                     // Build message string from arguments
 
-                    TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
+                    string colouredClanTag = allClans.getClanTagColoured(player.UserIDString);
+
+                    TellMods(player.displayName, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.displayName + "</color>", msg, true);
                 }
             }
         }
@@ -1172,7 +1174,7 @@ namespace Oxide.Plugins
                         clist = clist + "\n<color=" + clan.tagColor + ">" + clan.tag + "</color> ---- Members: " + clan.members.Count;
 
                     ++count;
-                }                             
+                }
 
                 PrintToChat(player, clist);
 
@@ -1310,9 +1312,9 @@ namespace Oxide.Plugins
                                 }
                             }
                         }
-                        
+
                         string premessage = "<color=orange>Clan Members Online for [" + clanTag + "]</color> - <color=yellow>[ " + count + " ] Online</color>\n";
-                        
+
                         PrintToChat(player, premessage + message);
 
                         // Print the online list to the player
@@ -1450,7 +1452,7 @@ namespace Oxide.Plugins
 
                                     // Removes all pending invites by that clan
 
-                                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled."});
+                                    ConsoleNetwork.BroadcastToAllClients("chat.add", new object[] { player, "Clan " + "<color=" + c.tagColor + ">" + "[" + c.tag + "]" + "</color> " + "has been dismantled." });
                                     Puts("Clan [" + c.tag + "] has been dismantled by " + player.displayName + ".");
 
                                     // Alert the server and the console that the clan has been dismantled
@@ -1876,7 +1878,7 @@ namespace Oxide.Plugins
                         {
                             string tmp = "";
 
-                            if (i > 0)
+                            if (i > 1)
                                 tmp = " ";
 
                             msg += tmp + args[i];
@@ -1894,14 +1896,14 @@ namespace Oxide.Plugins
 
                             // Log the message in the console
 
-                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString); 
+                            rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
 
                             // Displays the players own message to themselves
 
                             if (allIgnoreData.isIgnoringPlayer(foundPlayer.UserIDString, player.UserIDString) == false)
                             {
-                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString); 
-                                
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+
                                 // If the player isn't pm'ing somebody who has them actively ignored, send the message privately
                             }
 
@@ -1934,7 +1936,7 @@ namespace Oxide.Plugins
                     {
                         string tmp = "";
 
-                        if (i > 0)
+                        if (i > 1)
                             tmp = " ";
 
                         msg += tmp + args[i];
@@ -1942,9 +1944,9 @@ namespace Oxide.Plugins
 
                     // Build the message from the rest of the arguments and tell the mods what they tried to say
 
-                    string colouredClanTag = allClans.getClanTagColoured(player.Id);
+                    string colouredClanTag = allClans.getClanTagColoured(player.UserIDString);
 
-                    TellMods(player.displayName, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
+                    TellMods(player.displayName,colouredClanTag + "<color=" + Color_PlayerName + ">" + player.displayName + "</color>", msg, true);
                 }
             }
 
@@ -1959,7 +1961,6 @@ namespace Oxide.Plugins
 
                 if (allMutedPlayers.isMuted(player.UserIDString) == false)
                 {
-
                     if (list_LastRepliedTo.ContainsKey(player.UserIDString))
                     {
                         // Check if the person has been messaged otherwise they can't reply to nobody
@@ -1970,7 +1971,7 @@ namespace Oxide.Plugins
 
                             // Make sure the user is online
 
-                            string msg = " ";
+                            string msg = "";
 
                             for (int i = 0; i < args.Length; i++)
                             {
@@ -2000,10 +2001,10 @@ namespace Oxide.Plugins
                             // Update that the player has replied to them
                         }
                         else
-                            PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
+                            PrintToChat(player, "The player is not online.");
                     }
                     else
-                        PrintToChat(player, "Message was too short.");
+                        PrintToChat(player, "You havn't pm'd anyone yet nor has anyone pm'd you.");
 
                 }// If not Muted
                 else
@@ -2012,11 +2013,11 @@ namespace Oxide.Plugins
 
                     // Tell the player they are muted
 
-                    if (args.Length > 1)
+                    if (args.Length > 0)
                     {
                         string msg = "";
 
-                        for (int i = 1; i < args.Length; i++)
+                        for (int i = 0; i < args.Length; i++)
                         {
                             string tmp = "";
 
@@ -2028,7 +2029,9 @@ namespace Oxide.Plugins
 
                         // Build the message from the rest of the arguments and tell the mods what they tried to say
 
-                        TellMods(player.displayName, "<color=" + Color_PlayerName + ">" + player.displayName + ": </color>", msg, true);
+                        string colouredClanTag = allClans.getClanTagColoured(player.UserIDString);
+
+                        TellMods(player.displayName, colouredClanTag + "<color=" + Color_PlayerName + ">" + player.displayName + "</color>", msg, true);
                     }
                 }
             }
@@ -2318,6 +2321,8 @@ namespace Oxide.Plugins
                     string online = "<color=#99ff66>[ The player " + IsOnlinePoke(player, args[0]) + " is ONLINE ]</color>";
 
                     PrintToChat(player, online);
+
+                    metric_pokes++;
                 }
                 else
                 {
@@ -2326,12 +2331,12 @@ namespace Oxide.Plugins
                     string offline = "<color=#a9a9a9>[ The player " + args[0] + " is OFFLINE ]</color>";
 
                     PrintToChat(player, offline);
+
+                    metric_pokes++;
                 }
             }
             else
                 PrintToChat(player, "Please enter proper arguments. Example /online Andy");
-
-            metric_pokes++;
         }
         #endregion
 
@@ -2416,7 +2421,7 @@ namespace Oxide.Plugins
         }
 
         #endregion
-        
+
         #region Helpers
 
         bool IsAlphaNumeric(string str)
