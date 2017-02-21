@@ -5,7 +5,7 @@ using Oxide.Core;
 
 namespace Oxide.Plugins
 {
-    [Info("DoomChat", "SoftDevAndy & wski", "2.0.2")]
+    [Info("DoomChat", "SoftDevAndy & wski", "2.0.3")]
     [Description("Custom Chat Plugin for the DoomTown.io Rust Server")]
     class DoomChat : RustPlugin
     {
@@ -1992,7 +1992,14 @@ namespace Oxide.Plugins
 
                             // Log the PM to file
 
-                            rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+
+                            if (allIgnoreData.isIgnoringPlayer(foundPlayer.UserIDString, player.UserIDString) == false)
+                            {
+                                rust.SendChatMessage(foundPlayer, fullMsg, null, player.UserIDString);
+
+                                // If the player isn't pm'ing somebody who has them actively ignored, send the message privately
+                            }
+
                             rust.SendChatMessage(player, fullMsg, null, player.UserIDString);
 
                             // Send the message to the original player and the player they are replying to privately
