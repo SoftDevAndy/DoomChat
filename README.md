@@ -1,4 +1,4 @@
-# DoomChat
+# rustoxidechatmoderator
 
 Custom plugins written to work with Oxide &amp; Rust. This plugin was launched on http://doomtown.io/ which is a popular modded Rust server. 
 
